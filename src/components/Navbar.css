@@ -10,6 +10,21 @@
   }
   
   .animate-carEntrance {
-	animation: carEntrance 1s ease-out;
+	animation: carEntrance 0.8s ease-out;
+  }
+  
+  .nav-link {
+	display: block;
+	padding: 10px 16px;
+	text-align: center;
+	color: white;
+	background-color: #1d4ed8;
+	border-radius: 8px;
+	transition: background 0.3s;
+  }
+  
+  .nav-link:hover {
+	background-color: #16a34a;
+	color: white;
   }
   

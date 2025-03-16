@@ -1,0 +1,1 @@
+export const BACKEND_URL = "https://car-mela-backend-5r2q.vercel.app"

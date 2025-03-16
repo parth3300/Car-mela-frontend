@@ -1,55 +1,89 @@
-// About.jsx
-
-import React from 'react';
+import React from "react";
+import { motion } from "framer-motion";
+import { Users, Star, CarFront } from "lucide-react";
 
 const About = () => {
-  const containerStyle = {
-    textAlign: 'center',
-    margin: '20px',
-  };
-
-  const featuresStyle = {
-    marginTop: '20px',
-  };
-
-  const teamMemberStyle = {
-    display: 'inline-block',
-    margin: '10px',
-    maxWidth: '200px',
-  };
-
   return (
-    <div style={containerStyle}>
-      <h2>About Our Car Project</h2>
-      <p>
-        Welcome to our car project! Here, we strive to provide the best information and reviews about various cars in the market.
-      </p>
+    <div className="min-h-screen bg-gradient-to-br from-white to-blue-50 py-16 px-6">
+      <div className="max-w-6xl mx-auto flex flex-col gap-24">
 
-      <div style={featuresStyle}>
-        <h3>Key Features</h3>
-        <ul>
-          <li>Comprehensive car reviews</li>
-          <li>User ratings and feedback</li>
-          <li>Explore a wide range of car models</li>
-        </ul>
-      </div>
+        {/* 🚗 About Section */}
+        <motion.div
+          className="text-center flex flex-col items-center gap-6"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6 }}
+        >
+          <h2 className="text-5xl font-extrabold text-blue-800">
+            🚗 About Our Car Project
+          </h2>
+          <p className="text-gray-600 text-lg max-w-3xl leading-relaxed">
+            Welcome to our car project! We provide comprehensive information, ratings, and reviews on a wide range of cars. Explore, rate, and review your favorite cars effortlessly!
+          </p>
+        </motion.div>
 
-      <div style={featuresStyle}>
-        <h3>Meet the Team</h3>
-        <div style={teamMemberStyle}>
-          <img className=' w-[100px] h-[100px] rounded-[50%] object-cover '  src="images/team-member-1.jpeg" alt="Team Member 1" />
-          <p>Parth Singal</p>
-          <p>Frontend Developer</p>
-        </div>
+        {/* ⭐ Key Features */}
+        <motion.div
+          className="flex flex-col items-center gap-12"
+          initial={{ opacity: 0 }}
+          whileInView={{ opacity: 1 }}
+          transition={{ duration: 0.6 }}
+          viewport={{ once: true }}
+        >
+          <h3 className="text-4xl font-semibold text-gray-700">Key Features</h3>
 
-        <div style={teamMemberStyle}>
-          <img className=' w-[100px] h-[100px] rounded-[50%] object-cover' src="images/team-member-2.jpg" alt="Team Member 2" />
-          <p>Nrushank Bodar</p>
-          <p>Backend Developer</p>
-        </div>
+          <div className="grid md:grid-cols-3 gap-8 w-full max-w-5xl">
+            {/* Feature 1 */}
+            <motion.div
+              className="bg-white p-6 rounded-2xl shadow-md hover:shadow-xl transition-all flex flex-col items-center gap-4 text-center"
+              whileHover={{ scale: 1.05 }}
+            >
+              <Star size={40} className="text-blue-600" />
+              <h4 className="text-xl font-bold text-gray-700">Comprehensive Reviews</h4>
+              <p className="text-gray-500 text-sm">
+                In-depth car reviews to help you make informed decisions.
+              </p>
+            </motion.div>
+
+            {/* Feature 2 */}
+            <motion.div
+              className="bg-white p-6 rounded-2xl shadow-md hover:shadow-xl transition-all flex flex-col items-center gap-4 text-center"
+              whileHover={{ scale: 1.05 }}
+            >
+              <Users size={40} className="text-blue-600" />
+              <h4 className="text-xl font-bold text-gray-700">User Ratings</h4>
+              <p className="text-gray-500 text-sm">
+                Honest feedback and ratings from a community of car enthusiasts.
+              </p>
+            </motion.div>
+
+            {/* Feature 3 */}
+            <motion.div
+              className="bg-white p-6 rounded-2xl shadow-md hover:shadow-xl transition-all flex flex-col items-center gap-4 text-center"
+              whileHover={{ scale: 1.05 }}
+            >
+              <CarFront size={40} className="text-blue-600" />
+              <h4 className="text-xl font-bold text-gray-700">Explore Models</h4>
+              <p className="text-gray-500 text-sm">
+                Discover a wide selection of car models from various brands.
+              </p>
+            </motion.div>
+          </div>
+        </motion.div>
+
+        {/* 👥 Team Section */}
+        <motion.div
+          className="flex flex-col items-center gap-12"
+          initial={{ opacity: 0 }}
+          whileInView={{ opacity: 1 }}
+          transition={{ duration: 0.6 }}
+          viewport={{ once: true }}
+        >
+         
+        </motion.div>
       </div>
     </div>
   );
-}
+};
 
 export default About;

@@ -1,110 +1,58 @@
 import React from "react";
 import { Link, NavLink } from "react-router-dom";
-import "./Navbar.css";
+import { motion } from "framer-motion";
+import { useAuth } from "../context/AuthContext";
 
 const Navbar = () => {
+  const { user, logout } = useAuth();
+
   return (
-    <div className="">
-      <nav className="bg-white border-gray-200 dark:bg-gray-900">
-        <div className="max-w-screen-xl flex flex-wrap items-center justify-between mx-auto p-4">
-          <Link className="flex items-center gap-2" to="/">
-            <img
-              src="/images/logo.jpg"
-              alt=""
-              className="w-8 h-8 object-cover rounded-[50%]"
-            />
+    <nav className="bg-white border-b border-gray-200 dark:bg-gray-900 shadow-md">
+      <div className="max-w-screen-xl mx-auto flex items-center justify-between p-4">
+        {/* Logo */}
+        <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
+          <Link className="flex items-center gap-2 text-xl font-bold text-blue-800" to="/">
+            <img src="/images/logo.jpg" alt="Carmela Logo" className="w-10 h-10 object-cover rounded-full" />
             <span className="animate-carEntrance">Carmela</span>
           </Link>
+        </motion.div>
 
-          <button
-            data-collapse-toggle="navbar-default"
-            type="button"
-            className="inline-flex items-center p-2 w-10 h-10 justify-center text-sm text-gray-500 rounded-lg md:hidden  focus:outline-none focus:ring-2 focus:ring-gray-200 dark:text-gray-400 dark:hover:bg-gray-700 dark:focus:ring-gray-600"
-            aria-controls="navbar-default"
-            aria-expanded="false"
-            aria-label="Toggle navigation"
-          >
-            <span className="sr-only">Open main menu</span>
-            <svg
-              className="w-5 h-5"
-              aria-hidden="true"
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 17 14"
-            >
-              <path
-                stroke="currentColor"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M1 1h15M1 7h15M1 13h15"
-              />
-            </svg>
-          </button>
-          <div className="hidden w-full md:block md:w-auto" id="navbar-default">
-            <ul className="font-medium flex flex-col p-4 md:p-2 mt-4 border border-gray-100 rounded-lg bg-gray-50 md:flex-row md:space-x-8 rtl:space-x-reverse md:mt-0 md:border-0 md:bg-white dark:bg-gray-800 md:dark:bg-gray-900 dark:border-gray-700">
-              <li>
-                <NavLink
-                  to="cars"
-                  className="block py-2 px-3 text-white bg-blue-700 rounded-xl md:bg-transparent md:text-blue-700 md:p-2 dark:text-white md:dark:text-blue-500 hover:text-white hover:bg-green-600 "
-                  
-                >
-                  Cars
-                </NavLink>
-              </li>
-              <li>
-                <NavLink
-                  to="companies"
-                  className="block py-2 px-3 text-white bg-blue-700 rounded-xl md:bg-transparent md:text-blue-700 md:p-2 dark:text-white md:dark:text-blue-500 hover:text-white hover:bg-green-600"
-                 
-                >
-                  Company
-                </NavLink>
-              </li>
-
-              <li>
-                <NavLink
-                  to="carowners"
-                  className="block py-2 px-3 text-white bg-blue-700 rounded-xl md:bg-transparent md:text-blue-700 md:p-2 dark:text-white md:dark:text-blue-500 hover:text-white hover:bg-green-600"
-                  
-                >
-                  Carowner
-                </NavLink>
-              </li>
-              <li>
-                <NavLink
-                  to="dealerships"
-                  className="block py-2 px-3 text-white bg-blue-700 rounded-xl md:bg-transparent md:text-blue-700 md:p-2 dark:text-white md:dark:text-blue-500 hover:text-white hover:bg-green-600"
-                  
-                >
-                  Dealership
-                </NavLink>
-              </li>
-
-              <li>
-                <NavLink
-                  to="signup"
-                  className="block py-2 px-3 text-white bg-blue-700 rounded-xl md:bg-transparent md:text-blue-700 md:p-2 dark:text-white md:dark:text-blue-500 hover:text-white hover:bg-green-600"
-                  
-                >
-                  Sign Up/Log in
-                </NavLink>
-              </li>
-
-              <li>
-                <NavLink
-                  to="about"
-                  className="block py-2 px-3 text-white bg-blue-700 rounded-xl md:bg-transparent md:text-blue-700 md:p-2 dark:text-white md:dark:text-blue-500 hover:text-white hover:bg-green-600"
-                  
-                >
-                  About
-                </NavLink>
-              </li>              
-            </ul>
-          </div>
+        {/* Navigation Links */}
+        <div className="hidden md:flex md:items-center md:space-x-6">
+          {["cars", "companies", "carowners", "dealerships", "about"].map((item) => (
+            <motion.div whileHover={{ scale: 1.1 }} transition={{ type: "spring", stiffness: 300 }} key={item}>
+              <NavLink to={`/${item}`} className="nav-link">
+                {item.charAt(0).toUpperCase() + item.slice(1)}
+              </NavLink>
+            </motion.div>
+          ))}
         </div>
-      </nav>
-    </div>
+
+        {/* Auth Section */}
+        <div className="flex items-center space-x-4">
+          {user ? (
+            <>
+              <span className="text-green-600 font-semibold">Welcome, {user}!</span>
+
+              <motion.button
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.9 }}
+                onClick={logout}
+                className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg transition-all"
+              >
+                Logout
+              </motion.button>
+            </>
+          ) : (
+            <motion.div whileHover={{ scale: 1.1 }}>
+              <NavLink to="/signup" className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-all">
+                Sign Up / Log In
+              </NavLink>
+            </motion.div>
+          )}
+        </div>
+      </div>
+    </nav>
   );
 };
 
