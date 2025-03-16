@@ -30,7 +30,6 @@ const CompanyModal = ({ isOpen, closeModal, company, onDeleteSuccess }) => {
 
     setLoading(true);
     console.log("Starting DELETE request for company...");
-
     try {
       const url = `${BACKEND_URL}/store/companies/${company.id}/`;
       console.log("DELETE URL:", url);
@@ -67,7 +66,10 @@ const CompanyModal = ({ isOpen, closeModal, company, onDeleteSuccess }) => {
       setShowConfirm(false);
     }
   };
+  console.log("HI#",![28, 29, 30].includes(company.id))
 
+  console.log("HI##");
+  
   return (
     <>
       {/* Modal Overlay */}
@@ -136,10 +138,17 @@ const CompanyModal = ({ isOpen, closeModal, company, onDeleteSuccess }) => {
                   )}
                 </div>
               </div>
-
               {/* Action Buttons */}
               <div className="flex justify-center space-x-4 mt-8">
-                {authToken ? (
+                {!authToken ? (
+                  <p className="text-sm text-gray-500 italic">
+                    Login to manage this company
+                  </p>
+                ) : [28, 29, 30].includes(company.id) ? (
+                  <p className="text-sm text-gray-500 italic">
+                    You cannot delete this company
+                  </p>
+                ) : (
                   <button
                     onClick={() => {
                       console.log("Clicked delete, showing confirm dialog");
@@ -154,13 +163,8 @@ const CompanyModal = ({ isOpen, closeModal, company, onDeleteSuccess }) => {
                   >
                     Delete
                   </button>
-                ) : (
-                  <p className="text-sm text-gray-500 italic">
-                    Login to manage this company
-                  </p>
                 )}
               </div>
-
               {/* Confirm Delete Modal */}
               <AnimatePresence>
                 {showConfirm && (
