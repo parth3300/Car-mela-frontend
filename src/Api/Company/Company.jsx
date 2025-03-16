@@ -182,7 +182,7 @@ const Company = () => {
               </div>
 
               {/* Update Button */}
-              {authToken && (
+              {authToken && ![28, 29, 30].includes(company.id) && (
                 <button
                   onClick={(e) => {
                     e.stopPropagation(); // Prevent opening the details modal
