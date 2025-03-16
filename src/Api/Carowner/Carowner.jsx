@@ -8,6 +8,8 @@ import CreateCarownerModal from "./CreateCarownerModal";
 import CarownerModal from "./CarownerModal";
 import UpdateCarownerModal from "./UpdateCarownerModal";
 import Notification from "../../components/Globle/Notification";
+import { PencilSquareIcon } from "@heroicons/react/24/solid"; // For edit icon
+import { jwtDecode } from "jwt-decode";
 
 const Carowners = () => {
   const [carowners, setCarowners] = useState([]);
@@ -15,10 +17,16 @@ const Carowners = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [selectedCarowner, setSelectedCarowner] = useState(null);
-  const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false);
+  const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false); // State for UpdateCarownerModal visibility
+  const [carownerToUpdate, setCarownerToUpdate] = useState(null); // State to store the car owner to update
   const [notification, setNotification] = useState({ message: "", type: "" });
 
   const authToken = localStorage.getItem("authToken");
+  let user_id = ""
+  if(authToken){
+    let decoded = jwtDecode(authToken);
+    user_id = decoded?.user_id;
+  }
 
   const fetchCarowners = async () => {
     setLoading(true);
@@ -64,7 +72,7 @@ const Carowners = () => {
         owner.id === updatedCarowner.id ? updatedCarowner : owner
       )
     );
-    setIsUpdateModalOpen(false);
+    setIsUpdateModalOpen(false); // Close the modal after successful update
     setNotification({
       message: "Car owner updated successfully! 🎉",
       type: "success",
@@ -175,25 +183,24 @@ const Carowners = () => {
               </div>
 
               {/* Update Button */}
-              {authToken && (
+              {authToken && user_id && user_id === carowner?.user && (
                 <button
                   onClick={(e) => {
                     e.stopPropagation(); // Prevent opening the details modal
-                    setSelectedCarowner(carowner);
-                    setIsUpdateModalOpen(true);
+                    setCarownerToUpdate(carowner); // Set the car owner to update
+                    setIsUpdateModalOpen(true); // Open the update modal
                   }}
-                  className="absolute bottom-4 right-4 px-4 py-2 bg-blue-600 text-white text-sm font-semibold rounded-lg shadow-md hover:bg-blue-700 transition-all"
+                  className="absolute bottom-4 right-4 p-2 bg-blue-600 text-white rounded-full hover:bg-blue-700 transition-all"
                 >
-                  Update
+                  <PencilSquareIcon className="h-5 w-5" />
                 </button>
               )}
 
               {/* View Details Link */}
               <motion.div
-  className="mt-4 text-left text-sm text-blue-600 font-medium hover:text-blue-700 transition-all"
-  whileHover={{ scale: 1.05 }}
->
-
+                className="mt-4 text-left text-sm text-blue-600 font-medium hover:text-blue-700 transition-all"
+                whileHover={{ scale: 1.05 }}
+              >
                 View Details →
               </motion.div>
             </div>
@@ -241,7 +248,7 @@ const Carowners = () => {
         {isUpdateModalOpen && (
           <UpdateCarownerModal
             isOpen={isUpdateModalOpen}
-            carowner={selectedCarowner}
+            carowner={carownerToUpdate} // Pass the car owner to update directly
             closeModal={() => setIsUpdateModalOpen(false)}
             onUpdateSuccess={handleUpdateSuccess}
             setNotification={setNotification}

@@ -105,7 +105,10 @@ const UpdateCompanyModal = ({ isOpen, onClose, company, onUpdateSuccess }) => {
     try {
       const data = new FormData();
       data.append("title", formData.title);
-      if (formData.logo) data.append("logo", formData.logo); // Append the file if it exists
+      if (formData.logo instanceof File) {
+        // Append the logo only if it's a new file
+        data.append("logo", formData.logo);
+      }
       data.append("country", formData.country);
       data.append("since", formData.since);
 

@@ -73,8 +73,13 @@ const UpdateCarownerModal = ({ isOpen, closeModal, carowner, onUpdateSuccess, se
       const data = new FormData();
       data.append("user", userId);
       data.append("contact", formData.contact);
-      if (profilePic) {
+
+      // If no new profile picture is provided, pass the existing image URL
+      if (profilePic  instanceof File) {
+
         data.append("profile_pic", profilePic);
+      } else if (carowner.profile_pic instanceof File || formData.profilePic instanceof File) {
+        data.append("profile_pic", carowner.profile_pic);
       }
 
       const response = await axios.put(`${BACKEND_URL}/store/carowners/${carowner.id}/`, data, {

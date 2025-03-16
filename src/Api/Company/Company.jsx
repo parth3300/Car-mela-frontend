@@ -6,6 +6,7 @@ import { BACKEND_URL } from "../../Constants/constant";
 import { motion } from "framer-motion";
 import Notification from "../../components/Globle/Notification";
 import UpdateCompanyModal from "./UpdateCompanyModal.jsx";
+import { PencilSquareIcon } from "@heroicons/react/24/solid"; // For edit icon
 
 const Company = () => {
   const [companies, setCompanies] = useState([]);
@@ -14,6 +15,7 @@ const Company = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false); // State for UpdateCompanyModal visibility
+  const [companyToUpdate, setCompanyToUpdate] = useState(null); // State to store the company to update
   const [notification, setNotification] = useState({
     message: "",
     type: "",
@@ -184,11 +186,12 @@ const Company = () => {
                 <button
                   onClick={(e) => {
                     e.stopPropagation(); // Prevent opening the details modal
+                    setCompanyToUpdate(company); // Set the company to update
                     setIsUpdateModalOpen(true); // Open the update modal
                   }}
-                  className="absolute bottom-4 right-4 px-4 py-2 bg-blue-600 text-white text-sm font-semibold rounded-lg shadow-md hover:bg-blue-700 transition-all"
+                  className="absolute bottom-4 right-4 p-2 bg-blue-600 text-white rounded-full hover:bg-blue-700 transition-all"
                 >
-                  Update
+                  <PencilSquareIcon className="h-5 w-5" />
                 </button>
               )}
             </div>
@@ -230,7 +233,7 @@ const Company = () => {
         <UpdateCompanyModal
           isOpen={isUpdateModalOpen}
           onClose={() => setIsUpdateModalOpen(false)}
-          company={selectedCompany}
+          company={companyToUpdate} // Pass the company to update directly
           onUpdateSuccess={handleUpdateSuccess}
         />
       )}
