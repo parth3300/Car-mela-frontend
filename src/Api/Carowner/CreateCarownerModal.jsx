@@ -3,24 +3,92 @@ import axios from "axios";
 import { jwtDecode } from "jwt-decode";
 import { motion, AnimatePresence } from "framer-motion";
 import { BACKEND_URL } from "../../Constants/constant";
-import { XMarkIcon, CheckCircleIcon } from "@heroicons/react/24/solid";
+import { XMarkIcon, CheckCircleIcon, ChevronDownIcon } from "@heroicons/react/24/solid";
 
-// Predefined list of dial codes
+// Updated DIAL_CODES array with flag emojis (optional but nice UX)
 const DIAL_CODES = [
-  { code: "+1", country: "USA" },
-  { code: "+91", country: "India" },
-  { code: "+44", country: "UK" },
-  { code: "+61", country: "Australia" },
-  { code: "+81", country: "Japan" },
-  { code: "+86", country: "China" },
-  { code: "+33", country: "France" },
-  { code: "+49", country: "Germany" },
-  { code: "+7", country: "Russia" },
-  { code: "+52", country: "Mexico" },
+  { code: "+1", country: "USA", flag: "🇺🇸" },
+  { code: "+91", country: "India", flag: "🇮🇳" },
+  { code: "+44", country: "UK", flag: "🇬🇧" },
+  { code: "+61", country: "Australia", flag: "🇦🇺" },
+  { code: "+81", country: "Japan", flag: "🇯🇵" },
+  { code: "+86", country: "China", flag: "🇨🇳" },
+  { code: "+33", country: "France", flag: "🇫🇷" },
+  { code: "+49", country: "Germany", flag: "🇩🇪" },
+  { code: "+7", country: "Russia", flag: "🇷🇺" },
+  { code: "+52", country: "Mexico", flag: "🇲🇽" },
 ];
 
+const DialCodeSelector = ({ selectedCode, onChange }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const [search, setSearch] = useState("");
+
+  const filteredDialCodes = DIAL_CODES.filter(
+    (dial) =>
+      dial.country.toLowerCase().includes(search.toLowerCase()) ||
+      dial.code.includes(search)
+  );
+
+  return (
+    <div className="relative w-1/3">
+      <button
+        type="button"
+        onClick={() => setIsOpen(!isOpen)}
+        className="w-full px-4 py-2 border border-gray-300 rounded-lg flex items-center justify-between focus:ring-2 focus:ring-blue-400 bg-white"
+      >
+        <span>
+          {selectedCode.flag} {selectedCode.code}
+        </span>
+        <ChevronDownIcon className="w-4 h-4 text-gray-500" />
+      </button>
+
+      {isOpen && (
+        <motion.div
+          initial={{ opacity: 0, y: -5 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -5 }}
+          className="absolute mt-2 w-full bg-white border border-gray-300 rounded-lg shadow-lg z-10 max-h-60 overflow-y-auto"
+        >
+          <input
+            type="text"
+            placeholder="Search..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="w-full px-4 py-2 border-b border-gray-200 outline-none focus:ring-2 focus:ring-blue-400"
+          />
+
+          <ul className="divide-y divide-gray-100 max-h-48 overflow-y-auto">
+            {filteredDialCodes.length > 0 ? (
+              filteredDialCodes.map((dial) => (
+                <li
+                  key={dial.code}
+                  onClick={() => {
+                    onChange(dial);
+                    setIsOpen(false);
+                    setSearch("");
+                  }}
+                  className="flex items-center gap-2 px-4 py-2 hover:bg-blue-50 cursor-pointer"
+                >
+                  <span className="text-lg">{dial.flag}</span>
+                  <span>{dial.country}</span>
+                  <span className="ml-auto text-gray-500">{dial.code}</span>
+                </li>
+              ))
+            ) : (
+              <li className="px-4 py-2 text-gray-400">No matches found</li>
+            )}
+          </ul>
+        </motion.div>
+      )}
+    </div>
+  );
+};
+
 const CreateCarOwnerModal = ({ isOpen, closeModal, onCreateSuccess, setNotification }) => {
-  const [formData, setFormData] = useState({ dial_code: "+1", phone_number: "" }); // Default dial code
+  const [formData, setFormData] = useState({
+    dial_code: DIAL_CODES[0], // Default dial code object
+    phone_number: "", // Phone number field
+  });
   const [profilePic, setProfilePic] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -99,7 +167,7 @@ const CreateCarOwnerModal = ({ isOpen, closeModal, onCreateSuccess, setNotificat
     try {
       const data = new FormData();
       data.append("user", userId);
-      data.append("dial_code", formData.dial_code);
+      data.append("dial_code", formData.dial_code.code); // Use the dial code value
       data.append("phone_number", formData.phone_number);
       data.append("profile_pic", profilePic);
 
@@ -111,7 +179,7 @@ const CreateCarOwnerModal = ({ isOpen, closeModal, onCreateSuccess, setNotificat
       });
 
       // Reset form data
-      setFormData({ dial_code: "+1", phone_number: "" });
+      setFormData({ dial_code: DIAL_CODES[0], phone_number: "" });
       setProfilePic(null);
 
       // ✅ Show success modal
@@ -230,20 +298,14 @@ const CreateCarOwnerModal = ({ isOpen, closeModal, onCreateSuccess, setNotificat
                 {/* Combined Dial Code and Phone Number Field */}
                 <div>
                   <label className="block text-gray-700 mb-2">Phone Number</label>
-                  <div className="flex gap-2">
+                  <div className="flex gap-2 items-center">
                     {/* Dial Code Dropdown */}
-                    <select
-                      name="dial_code"
-                      value={formData.dial_code}
-                      onChange={handleChange}
-                      className="w-1/4 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-400 outline-none"
-                    >
-                      {DIAL_CODES.map((dial) => (
-                        <option key={dial.code} value={dial.code}>
-                          {dial.code} ({dial.country})
-                        </option>
-                      ))}
-                    </select>
+                    <DialCodeSelector
+                      selectedCode={formData.dial_code}
+                      onChange={(selected) =>
+                        setFormData((prev) => ({ ...prev, dial_code: selected }))
+                      }
+                    />
 
                     {/* Phone Number Input */}
                     <input
@@ -251,7 +313,7 @@ const CreateCarOwnerModal = ({ isOpen, closeModal, onCreateSuccess, setNotificat
                       name="phone_number"
                       value={formData.phone_number}
                       onChange={handleChange}
-                      className="w-3/4 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-400 outline-none"
+                      className="w-2/3 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-400 outline-none"
                       placeholder="Enter phone number"
                       required
                       maxLength={10} // Limit input to 10 digits

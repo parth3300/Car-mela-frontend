@@ -210,6 +210,11 @@ const CreateCompanyModal = ({ onClose, onCreated }) => {
               value={since}
               onChange={(e) => setSince(e.target.value)}
               required
+              onInput={(e) => {
+                if (e.target.value.length > 2) {
+                  e.target.value = e.target.value.slice(0, 4); // trim to 2 digits
+                }
+              }}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-400 outline-none"
             />
           </div>

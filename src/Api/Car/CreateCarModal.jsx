@@ -87,6 +87,8 @@ const CreateCarModal = ({ isOpen, closeModal, onCreateSuccess }) => {
     fetchCompanies();
   }, []);
 
+  const companiy_titles = companies.map((company) => company.title.toLowerCase());
+
   const handleCompanySearchChange = (e) => {
     const query = e.target.value;
     setSearchCompanyQuery(query);
@@ -112,16 +114,19 @@ const CreateCarModal = ({ isOpen, closeModal, onCreateSuccess }) => {
     }
   };
 
+  // Handle company keydown events (arrow navigation)
   const handleCompanyKeyDown = (e) => {
     if (e.key === "Enter") {
-      e.preventDefault(); // Prevent form submission
-  
-      const query = searchCompanyQuery.trim();
-  
+      e.preventDefault();
+      const query = searchCompanyQuery.trim().toLowerCase();
+
+      // If there are suggestions, select the first one
       if (companySuggestions.length > 0) {
-        // If there are suggestions, select the first one
         const firstSuggestion = companySuggestions[0];
         handleCompanySelect(firstSuggestion);
+      } else if (companiy_titles.includes(query)) {
+        console.log(query);
+        handleCompanySelect(query);
       } else if (query) {
         // If no suggestions and the query is not empty, open the CreateCompanyModal
         setShowCompanyModal(true);
@@ -158,7 +163,13 @@ const CreateCarModal = ({ isOpen, closeModal, onCreateSuccess }) => {
   };
 
   const handleColorKeyDown = (e) => {
-    if (e.key === "ArrowDown") {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      if (colorSuggestions.length > 0) {
+        const firstSuggestion = colorSuggestions[0];
+        handleColorSelect(firstSuggestion);
+      }
+    } else if (e.key === "ArrowDown") {
       e.preventDefault();
       setHighlightedColorIndex((prevIndex) =>
         prevIndex < colorSuggestions.length - 1 ? prevIndex + 1 : prevIndex
@@ -287,6 +298,7 @@ const CreateCarModal = ({ isOpen, closeModal, onCreateSuccess }) => {
       setMessage("❌ Failed to create company.");
     }
   };
+
   return (
     <>
       <AnimatePresence>
@@ -298,11 +310,12 @@ const CreateCarModal = ({ isOpen, closeModal, onCreateSuccess }) => {
             exit={{ opacity: 0 }}
           >
             <motion.div
-              ref={modalRef} // Attach the ref to the modal container
+              ref={modalRef}
               className="bg-white rounded-2xl shadow-xl p-8 w-full max-w-3xl relative"
               initial={{ scale: 0.8, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.8, opacity: 0 }}
+              style={{ maxHeight: "90vh", overflowY: "auto" }} // Add scrollbar
             >
               <button
                 onClick={() => {
@@ -319,6 +332,7 @@ const CreateCarModal = ({ isOpen, closeModal, onCreateSuccess }) => {
               </h2>
 
               <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+                {/* Form fields go here */}
                 <div className="w-full">
                   <label className="block text-gray-700">Car Image:</label>
                   <input
@@ -371,8 +385,7 @@ const CreateCarModal = ({ isOpen, closeModal, onCreateSuccess }) => {
                             ))}
                           </div>
                         )}
-                        {/* Show message if no company is found */}
-                        {searchCompanyQuery && companySuggestions.length === 0 && (
+                        {(!companiy_titles.includes(searchCompanyQuery.toLowerCase()) || !searchCompanyQuery) && (
                           <p className="text-sm text-gray-500 mt-1">
                             Company is not available. Press <span className="font-semibold">Enter</span> to create company.
                           </p>
@@ -467,6 +480,12 @@ const CreateCarModal = ({ isOpen, closeModal, onCreateSuccess }) => {
                         name="mileage"
                         value={formData.mileage}
                         onChange={handleChange}
+                        onInput={(e) => {
+                          if (e.target.value.length > 2) {
+                            e.target.value = e.target.value.slice(0, 2); // trim to 2 digits
+                          }
+                        }}
+                        max="99" // Optional but reinforces the limit
                         className="w-full p-2 border rounded-md"
                         required
                       />

@@ -7,7 +7,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import { jwtDecode } from "jwt-decode";
 import Notification from "../../components/Globle/Notification";
 import CreateCarOwnerModal from "../Carowner/CreateCarownerModal";
-
+// CHANGE: Import the SkeletonLoader component
+import SkeletonLoader from "../../components/SkeletonLoader";
 const CarDetails = () => {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -253,7 +254,7 @@ const CarDetails = () => {
         });
         return
       }
-      const response = await axios.put(`${BACKEND_URL}/store/carowners/${carowner.id}/`, balance_deduct, {
+      await axios.put(`${BACKEND_URL}/store/carowners/${carowner.id}/`, balance_deduct, {
         headers: {
           Authorization: `Bearer ${authToken}`,
           "Content-Type": "multipart/form-data",
@@ -367,239 +368,243 @@ const CarDetails = () => {
 
   return (
     <div className="bg-gradient-to-b from-blue-50 to-white min-h-screen py-10 px-6">
-      <motion.div
-        className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-12"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ duration: 0.5 }}
-      >
-        {/* LEFT COLUMN */}
-        <div className="flex flex-col gap-6">
-          <motion.img
-            src={image || "https://via.placeholder.com/500?text=No+Image"}
-            alt={`${title} - ${carmodel}`}
-            className="w-full h-[500px] object-cover rounded-2xl shadow-lg"
-            initial={{ scale: 0.95 }}
-            animate={{ scale: 1 }}
-            transition={{ duration: 0.5 }}
-          />
-
-          {/* REVIEWS SECTION */}
-          <div className="bg-white p-6 rounded-xl shadow-md">
-            <h3 className="text-xl font-semibold mb-4 text-blue-800">
-              Customer Reviews
-            </h3>
-
-            {reviews.length > 0 ? (
-              <ul className="space-y-4 mb-6">
-                {reviews.map((review) => (
-                  <li key={review.id} className="border-b pb-2">
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <div className="font-semibold text-gray-700">
-                          {review.user_name || review.name}
+      {/* CHANGE: Conditionally render SkeletonLoader while loading */}
+      {loading ? (
+        <SkeletonLoader />
+      ) : (
+        <motion.div
+          className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-12"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.5 }}
+        >
+          {/* LEFT COLUMN */}
+          <div className="flex flex-col gap-6">
+            <motion.img
+              src={image || "https://via.placeholder.com/500?text=No+Image"}
+              alt={`${title} - ${carmodel}`}
+              className="w-full h-[500px] object-cover rounded-2xl shadow-lg"
+              initial={{ scale: 0.95 }}
+              animate={{ scale: 1 }}
+              transition={{ duration: 0.5 }}
+            />
+  
+            {/* REVIEWS SECTION */}
+            <div className="bg-white p-6 rounded-xl shadow-md">
+              <h3 className="text-xl font-semibold mb-4 text-blue-800">
+                Customer Reviews
+              </h3>
+  
+              {reviews.length > 0 ? (
+                <ul className="space-y-4 mb-6">
+                  {reviews.map((review) => (
+                    <li key={review.id} className="border-b pb-2">
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <div className="font-semibold text-gray-700">
+                            {review.user_name || review.name}
+                          </div>
+                          <StarRating rating={review.ratings} />
+                          <p className="text-gray-600">{review.description}</p>
                         </div>
-                        <StarRating rating={review.ratings} />
-                        <p className="text-gray-600">{review.description}</p>
+                        {authToken && review.user === user_id && (
+                          <button
+                            onClick={() => handleDeleteReview(review.id)}
+                            className="text-red-500 hover:text-red-700"
+                          >
+                            Delete
+                          </button>
+                        )}
                       </div>
-                      {authToken && review.user === user_id && (
-                        <button
-                          onClick={() => handleDeleteReview(review.id)}
-                          className="text-red-500 hover:text-red-700"
-                        >
-                          Delete
-                        </button>
-                      )}
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="text-gray-500 mb-6">No reviews available.</p>
-            )}
-
-            <motion.button
-              className="w-full py-2 px-4 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-semibold"
-              onClick={handleAddComment}
-              whileHover={{ scale: 1.03 }}
-              whileTap={{ scale: 0.97 }}
-            >
-              {showReviewForm ? "Cancel" : "Add Comment"}
-            </motion.button>
-            {showReviewForm && (
-              <motion.form
-                className="mt-6 space-y-4"
-                onSubmit={handleSubmitReview}
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ duration: 0.3 }}
-              >
-                {/* Star Rating */}
-                <div className="flex items-center space-x-2">
-                  <p className="text-gray-700 font-medium">Rating:</p>
-                  {[1, 2, 3, 4, 5].map((star) => (
-                    <motion.span
-                      key={star}
-                      className={`cursor-pointer text-2xl ${
-                        newReview.ratings >= star ? "text-yellow-400" : "text-gray-400"
-                      }`}
-                      onClick={() => handleStarClick(star)}
-                      whileHover={{ scale: 1.2 }}
-                    >
-                      ★
-                    </motion.span>
+                    </li>
                   ))}
-                </div>
-
-                {/* Name Field (if NOT logged in) */}
-                {!localStorage.getItem("authToken") && (
-                  <input
-                    type="text"
-                    name="name"
-                    value={newReview.name}
+                </ul>
+              ) : (
+                <p className="text-gray-500 mb-6">No reviews available.</p>
+              )}
+  
+              <motion.button
+                className="w-full py-2 px-4 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 font-semibold"
+                onClick={handleAddComment}
+                whileHover={{ scale: 1.03 }}
+                whileTap={{ scale: 0.97 }}
+              >
+                {showReviewForm ? "Cancel" : "Add Comment"}
+              </motion.button>
+              {showReviewForm && (
+                <motion.form
+                  className="mt-6 space-y-4"
+                  onSubmit={handleSubmitReview}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ duration: 0.3 }}
+                >
+                  {/* Star Rating */}
+                  <div className="flex items-center space-x-2">
+                    <p className="text-gray-700 font-medium">Rating:</p>
+                    {[1, 2, 3, 4, 5].map((star) => (
+                      <motion.span
+                        key={star}
+                        className={`cursor-pointer text-2xl ${
+                          newReview.ratings >= star ? "text-yellow-400" : "text-gray-400"
+                        }`}
+                        onClick={() => handleStarClick(star)}
+                        whileHover={{ scale: 1.2 }}
+                      >
+                        ★
+                      </motion.span>
+                    ))}
+                  </div>
+  
+                  {/* Name Field (if NOT logged in) */}
+                  {!localStorage.getItem("authToken") && (
+                    <input
+                      type="text"
+                      name="name"
+                      value={newReview.name}
+                      onChange={handleReviewChange}
+                      placeholder="Your Name"
+                      className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                      required
+                    />
+                  )}
+  
+                  {/* Comment Field */}
+                  <textarea
+                    name="comment"
+                    value={newReview.comment}
                     onChange={handleReviewChange}
-                    placeholder="Your Name"
+                    rows={4}
                     className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
+                    placeholder="Write your comment here..."
                     required
                   />
-                )}
-
-                {/* Comment Field */}
-                <textarea
-                  name="comment"
-                  value={newReview.comment}
-                  onChange={handleReviewChange}
-                  rows={4}
-                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
-                  placeholder="Write your comment here..."
-                  required
-                />
-
-                <motion.button
-                  type="submit"
-                  className="w-full py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-semibold"
-                  whileHover={{ scale: 1.03 }}
-                  whileTap={{ scale: 0.97 }}
-                >
-                  Submit Review
-                </motion.button>
-              </motion.form>
-            )}
-          </div>
-        </div>
-
-        {/* RIGHT COLUMN */}
-        <div className="flex flex-col gap-8">
-          <div>
-            <h1 className="text-4xl font-extrabold text-blue-800 mb-2">
-              {title} - {carmodel}
-            </h1>
-            <p className="text-2xl text-gray-800 font-semibold">
-              $ {formattedPrice}
-            </p>
-            <div className="flex items-center mt-3">
-              <StarRating rating={ratings} />
-              <span className="ml-2 text-gray-600">({ratings} / 5)</span>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4 text-gray-700">
-            <div>
-              <p className="font-semibold">Color:</p>
-              <p>{color}</p>
-            </div>
-            <div>
-              <p className="font-semibold">Company:</p>
-              <p>{company_title}</p>
-            </div>
-            <div>
-              <p className="font-semibold">Year:</p>
-              <p>{registration_year}</p>
-            </div>
-            <div>
-              <p className="font-semibold">Fuel Type:</p>
-              <p>{fuel_type}</p>
-            </div>
-            <div>
-              <p className="font-semibold">Mileage:</p>
-              <p>{mileage} miles</p>
-            </div>
-            <div>
-              <p className="font-semibold">Owner:</p>
-              <p>{carowner ? carowner.name : "Not Owned Yet"}</p>
-            </div>
-          </div>
-
-          <div>
-            <h3 className="text-lg font-semibold text-gray-800 mb-2">
-              Dealerships
-            </h3>
-            {dealerships && dealerships.length > 0 ? (
-              <ul className="space-y-2">
-                {dealerships.map((dealer, index) => (
-                  <li key={dealer.id || index}>
-                    <Link
-                      to={`/dealerships/${dealer.id}`}
-                      className="text-blue-600 hover:underline"
-                    >
-                      {index + 1}. {dealer.name}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="text-gray-500">No dealerships available.</p>
-            )}
-          </div>
-
-          <div>
-            <h3 className="text-lg font-semibold text-gray-800 mb-2">
-              Description
-            </h3>
-            <p className="text-gray-600">{description}</p>
-          </div>
-
-          <div className="flex flex-col lg:flex-row gap-4">
-            {/* Buy Now Button */}
-            <motion.button
-              onClick={handleBuyNow}
-              disabled={buttonLoading || car.carowner} // Disable if processing OR already sold
-              className={`w-full py-4 text-white text-lg font-semibold rounded-lg shadow-md transition-all duration-300
-                ${car.carowner || buttonLoading ? "bg-gray-400 cursor-not-allowed" : "bg-indigo-600 hover:bg-indigo-700"}
-              `}
-              whileHover={!(car.carowner || buttonLoading) ? { scale: 1.05 } : {}}
-              whileTap={!(car.carowner || buttonLoading) ? { scale: 0.95 } : {}}
-            >
-              {car.carowner
-                ? "Sold Out"
-                : buttonLoading
-                ? "Processing..."
-                : "Buy Now"}
-            </motion.button>
-
-            {/* Delete Car Button */}
-            {authToken &&
-              user_id &&
-              carowner_user_id &&
-              user_id === carowner_user_id &&
-              ![8, 9, 10].includes(car.id) && (
-                <motion.button
-                  onClick={() => setShowDeleteConfirm(true)}
-                  disabled={buttonLoading}
-                  className={`w-full py-4 text-white text-lg font-semibold rounded-lg shadow-md transition-all duration-300
-                    ${buttonLoading ? "bg-gray-400 cursor-not-allowed" : "bg-red-600 hover:bg-red-700"}
-                  `}
-                  whileHover={!buttonLoading ? { scale: 1.05 } : {}}
-                  whileTap={!buttonLoading ? { scale: 0.95 } : {}}
-                >
-                  Delete Car
-                </motion.button>
+  
+                  <motion.button
+                    type="submit"
+                    className="w-full py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-semibold"
+                    whileHover={{ scale: 1.03 }}
+                    whileTap={{ scale: 0.97 }}
+                  >
+                    Submit Review
+                  </motion.button>
+                </motion.form>
               )}
+            </div>
           </div>
-
-        </div>
-      </motion.div>
-
+  
+          {/* RIGHT COLUMN */}
+          <div className="flex flex-col gap-8">
+            <div>
+              <h1 className="text-4xl font-extrabold text-blue-800 mb-2">
+                {title} - {carmodel}
+              </h1>
+              <p className="text-2xl text-gray-800 font-semibold">
+                $ {formattedPrice}
+              </p>
+              <div className="flex items-center mt-3">
+                <StarRating rating={ratings} />
+                <span className="ml-2 text-gray-600">({ratings} / 5)</span>
+              </div>
+            </div>
+  
+            <div className="grid grid-cols-2 gap-4 text-gray-700">
+              <div>
+                <p className="font-semibold">Color:</p>
+                <p>{color}</p>
+              </div>
+              <div>
+                <p className="font-semibold">Company:</p>
+                <p>{company_title}</p>
+              </div>
+              <div>
+                <p className="font-semibold">Year:</p>
+                <p>{registration_year}</p>
+              </div>
+              <div>
+                <p className="font-semibold">Fuel Type:</p>
+                <p>{fuel_type}</p>
+              </div>
+              <div>
+                <p className="font-semibold">Mileage:</p>
+                <p>{mileage} miles</p>
+              </div>
+              <div>
+                <p className="font-semibold">Owner:</p>
+                <p>{carowner ? carowner.name : "Not Owned Yet"}</p>
+              </div>
+            </div>
+  
+            <div>
+              <h3 className="text-lg font-semibold text-gray-800 mb-2">
+                Dealerships
+              </h3>
+              {dealerships && dealerships.length > 0 ? (
+                <ul className="space-y-2">
+                  {dealerships.map((dealer, index) => (
+                    <li key={dealer.id || index}>
+                      <Link
+                        to={`/dealerships/${dealer.id}`}
+                        className="text-blue-600 hover:underline"
+                      >
+                        {index + 1}. {dealer.name}
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="text-gray-500">No dealerships available.</p>
+              )}
+            </div>
+  
+            <div>
+              <h3 className="text-lg font-semibold text-gray-800 mb-2">
+                Description
+              </h3>
+              <p className="text-gray-600">{description}</p>
+            </div>
+  
+            <div className="flex flex-col lg:flex-row gap-4">
+              {/* Buy Now Button */}
+              <motion.button
+                onClick={handleBuyNow}
+                disabled={buttonLoading || car.carowner}
+                className={`w-full py-4 text-white text-lg font-semibold rounded-lg shadow-md transition-all duration-300
+                  ${car.carowner || buttonLoading ? "bg-gray-400 cursor-not-allowed" : "bg-indigo-600 hover:bg-indigo-700"}
+                `}
+                whileHover={!(car.carowner || buttonLoading) ? { scale: 1.05 } : {}}
+                whileTap={!(car.carowner || buttonLoading) ? { scale: 0.95 } : {}}
+              >
+                {car.carowner
+                  ? "Sold Out"
+                  : buttonLoading
+                  ? "Processing..."
+                  : "Buy Now"}
+              </motion.button>
+  
+              {/* Delete Car Button */}
+              {authToken &&
+                user_id &&
+                carowner_user_id &&
+                user_id === carowner_user_id &&
+                ![8, 9, 10].includes(car.id) && (
+                  <motion.button
+                    onClick={() => setShowDeleteConfirm(true)}
+                    disabled={buttonLoading}
+                    className={`w-full py-4 text-white text-lg font-semibold rounded-lg shadow-md transition-all duration-300
+                      ${buttonLoading ? "bg-gray-400 cursor-not-allowed" : "bg-red-600 hover:bg-red-700"}
+                    `}
+                    whileHover={!buttonLoading ? { scale: 1.05 } : {}}
+                    whileTap={!buttonLoading ? { scale: 0.95 } : {}}
+                  >
+                    Delete Car
+                  </motion.button>
+                )}
+            </div>
+          </div>
+        </motion.div>
+      )}
+  
       {/* Delete Confirmation Modal */}
       <AnimatePresence>
         {showDeleteConfirm && (
@@ -624,7 +629,7 @@ const CarDetails = () => {
                 Are you sure you want to delete{" "}
                 <span className="font-bold text-red-500">{title}</span>?
               </p>
-
+  
               {/* Confirm Buttons */}
               <div className="flex justify-center gap-4">
                 <button
@@ -650,7 +655,7 @@ const CarDetails = () => {
           </motion.div>
         )}
       </AnimatePresence>
-
+  
       {/* Global Notification */}
       {notification.message && (
         <Notification
@@ -659,7 +664,7 @@ const CarDetails = () => {
           onClose={() => setNotification({ message: "", type: "" })}
         />
       )}
-
+  
       {/* Create Car Owner Modal */}
       <CreateCarOwnerModal
         isOpen={showCreateCarOwnerModal}

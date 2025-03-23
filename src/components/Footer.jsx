@@ -30,7 +30,7 @@ const Footer = () => {
               <a href="/cars">Browse Cars</a>
             </li>
             <li>
-              <a href="/sell-car">Sell Your Car</a>
+            <a href="/#sell-your-car-button">Sell Your Car</a>
             </li>
           </ul>
         </motion.div>

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect } from "react";
 import axios from "axios";
 import StarRating from "../../components/StarRating";
 import { BACKEND_URL } from "../../Constants/constant";
@@ -7,7 +7,6 @@ import { UserIcon, IdentificationIcon } from "@heroicons/react/24/solid";
 import CreateCarownerModal from "./CreateCarownerModal";
 import CarownerModal from "./CarownerModal";
 import UpdateCarownerModal from "./UpdateCarownerModal";
-import Notification from "../../components/Globle/Notification";
 import { PencilSquareIcon } from "@heroicons/react/24/solid"; // For edit icon
 import { jwtDecode } from "jwt-decode";
 import SkeletonLoader from "../../components/SkeletonLoader";
@@ -29,14 +28,11 @@ const Carowners = () => {
     user_id = decoded?.user_id;
   }
 
-  let user_is_carowner = "";
+
   const fetchCarowners = async () => {
     setLoading(true);
     try {
       const response = await axios.get(`${BACKEND_URL}/store/carowners/`);
-      user_is_carowner = response.data.find(
-        (owner) => owner.user === user_id
-      );
       setCarowners(response.data);
     } catch (error) {
       console.error("Error fetching car owners:", error);
@@ -48,7 +44,6 @@ const Carowners = () => {
       setLoading(false);
     }
   };
-console.log("hi3",user_is_carowner);
 
   useEffect(() => {
     fetchCarowners();
@@ -85,6 +80,11 @@ console.log("hi3",user_is_carowner);
     });
   };
 
+  let user_is_carowner = "";
+  user_is_carowner = carowners.find(
+    (owner) => {
+      return owner.user == user_id}
+  );
   return (
     <div className="bg-gradient-to-b from-blue-50 to-white min-h-screen p-8 flex flex-col items-center">
       {/* Heading */}
@@ -133,7 +133,7 @@ console.log("hi3",user_is_carowner);
         />
 
         {/* Create button */}
-        {user_is_carowner != "" ? (
+        {user_is_carowner ? (
           "" // Nothing is rendered if the user is already a car owner
         ) : authToken ? (
           <motion.button

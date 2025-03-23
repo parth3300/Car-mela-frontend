@@ -243,7 +243,13 @@ const UpdateCompanyModal = ({ isOpen, onClose, company, onUpdateSuccess }) => {
                   name="since"
                   value={formData.since}
                   onChange={handleChange}
+                  onInput={(e) => {
+                    if (e.target.value.length > 2) {
+                      e.target.value = e.target.value.slice(0, 4); // trim to 2 digits
+                    }
+                  }}
                   required
+                  maxLength={4} // Optional: Adds client-side validation for max length
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-400 outline-none"
                 />
               </div>

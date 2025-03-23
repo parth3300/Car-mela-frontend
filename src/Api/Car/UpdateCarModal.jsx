@@ -114,7 +114,7 @@ const UpdateCarModal = ({ isOpen, closeModal, car, onUpdateSuccess }) => {
       }
     }
   }, [car, companies]);
-
+  const companiy_titles = companies.map((company) => company.title.toLowerCase())
   // Handle company search input change
   const handleCompanySearchChange = (e) => {
     const query = e.target.value;
@@ -127,33 +127,41 @@ const UpdateCarModal = ({ isOpen, closeModal, car, onUpdateSuccess }) => {
       );
       setCompanySuggestions(filteredCompanies);
     } else {
+      
       setCompanySuggestions([]);
     }
   };
+
 
   // Handle company selection from suggestions
   const handleCompanySelect = (company) => {
     if (company?.id) {
       setFormData({ ...formData, company: company.id });
       setSearchCompanyQuery(company.title);
+      
       setCompanySuggestions([]);
-    } else {
-      setMessage("❌ Invalid company selected.");
     }
   };
+
 
   // Handle company keydown events (arrow navigation)
   const handleCompanyKeyDown = (e) => {
     if (e.key === "Enter") {
       e.preventDefault();
-      const query = searchCompanyQuery.trim();
-
+      const query = searchCompanyQuery.trim().toLowerCase();
+      
+      // If there are suggestions, select the first one
       if (companySuggestions.length > 0) {
         const firstSuggestion = companySuggestions[0];
         handleCompanySelect(firstSuggestion);
+      } else if (companiy_titles.includes(query)){
+        console.log(query);        
+        handleCompanySelect(query);
       } else if (query) {
+        // If no suggestions and the query is not empty, open the CreateCompanyModal
         setShowCompanyModal(true);
       } else {
+        // If the input is empty, show all companies
         setCompanySuggestions(companies);
       }
     } else if (e.key === "ArrowDown") {
@@ -194,7 +202,13 @@ const UpdateCarModal = ({ isOpen, closeModal, car, onUpdateSuccess }) => {
 
   // Handle color keydown events (arrow navigation)
   const handleColorKeyDown = (e) => {
-    if (e.key === "ArrowDown") {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      if (colorSuggestions.length > 0) {
+        const firstSuggestion = colorSuggestions[0];
+        handleColorSelect(firstSuggestion);
+      }
+    } else if (e.key === "ArrowDown") {
       e.preventDefault();
       setHighlightedColorIndex((prevIndex) =>
         prevIndex < colorSuggestions.length - 1 ? prevIndex + 1 : prevIndex
@@ -204,10 +218,6 @@ const UpdateCarModal = ({ isOpen, closeModal, car, onUpdateSuccess }) => {
       setHighlightedColorIndex((prevIndex) =>
         prevIndex > 0 ? prevIndex - 1 : 0
       );
-    } else if (e.key === "Enter" && highlightedColorIndex !== -1) {
-      e.preventDefault();
-      const selectedColor = colorSuggestions[highlightedColorIndex];
-      handleColorSelect(selectedColor);
     }
   };
 
@@ -287,6 +297,7 @@ const UpdateCarModal = ({ isOpen, closeModal, car, onUpdateSuccess }) => {
     }
   };
 
+  
   return (
     <>
       <AnimatePresence>
@@ -303,6 +314,8 @@ const UpdateCarModal = ({ isOpen, closeModal, car, onUpdateSuccess }) => {
               initial={{ scale: 0.8, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.8, opacity: 0 }}
+              style={{ maxHeight: "90vh", overflowY: "auto" }} // Add scrollbar
+
             >
               <button
                 onClick={closeModal}
@@ -367,7 +380,7 @@ const UpdateCarModal = ({ isOpen, closeModal, car, onUpdateSuccess }) => {
                             ))}
                           </div>
                         )}
-                        {searchCompanyQuery && companySuggestions.length === 0 && (
+                        {(!companiy_titles.includes(searchCompanyQuery.toLowerCase()) || !searchCompanyQuery) && (
                           <p className="text-sm text-gray-500 mt-1">
                             Company is not available. Press <span className="font-semibold">Enter</span> to create company.
                           </p>
@@ -463,6 +476,12 @@ const UpdateCarModal = ({ isOpen, closeModal, car, onUpdateSuccess }) => {
                         name="mileage"
                         value={formData.mileage}
                         onChange={handleChange}
+                        onInput={(e) => {
+                          if (e.target.value.length > 2) {
+                            e.target.value = e.target.value.slice(0, 2); // trim to 2 digits
+                          }
+                        }}
+                        max="99" // Optional but reinforces the limit
                         className="w-full p-2 border rounded-md"
                         required
                       />

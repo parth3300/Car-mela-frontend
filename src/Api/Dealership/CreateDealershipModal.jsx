@@ -3,10 +3,25 @@ import axios from "axios";
 import { BACKEND_URL } from "../../Constants/constant";
 import { motion } from "framer-motion";
 
+// Predefined list of dial codes
+const DIAL_CODES = [
+  { code: "+1", country: "USA" },
+  { code: "+91", country: "India" },
+  { code: "+44", country: "UK" },
+  { code: "+61", country: "Australia" },
+  { code: "+81", country: "Japan" },
+  { code: "+86", country: "China" },
+  { code: "+33", country: "France" },
+  { code: "+49", country: "Germany" },
+  { code: "+7", country: "Russia" },
+  { code: "+52", country: "Mexico" },
+];
+
 const CreateDealershipModal = ({ onClose, onCreated }) => {
   const [formData, setFormData] = useState({
     dealership_name: "",
-    contact: "",
+    dial_code: "+1", // Default dial code
+    phone_number: "", // Phone number field
     address: "",
     ratings: 1,
   });
@@ -59,7 +74,14 @@ const CreateDealershipModal = ({ onClose, onCreated }) => {
   // Handle form field changes
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData({ ...formData, [name]: value });
+
+    if (name === "phone_number") {
+      // Allow only numeric input and limit to 10 digits
+      const numericValue = value.replace(/\D/g, "").slice(0, 10);
+      setFormData({ ...formData, [name]: numericValue });
+    } else {
+      setFormData({ ...formData, [name]: value });
+    }
   };
 
   // Handle address input change
@@ -86,7 +108,8 @@ const CreateDealershipModal = ({ onClose, onCreated }) => {
     try {
       const data = new FormData();
       data.append("dealership_name", formData.dealership_name);
-      data.append("contact", formData.contact);
+      data.append("dial_code", formData.dial_code); // Add dial code
+      data.append("phone_number", formData.phone_number); // Add phone number
       data.append("address", formData.address);
       data.append("ratings", formData.ratings);
 
@@ -159,17 +182,36 @@ const CreateDealershipModal = ({ onClose, onCreated }) => {
             />
           </div>
 
-          {/* Contact */}
+          {/* Combined Dial Code and Phone Number Field */}
           <div>
-            <label className="block text-gray-700 mb-2">Contact</label>
-            <input
-              type="text"
-              name="contact"
-              value={formData.contact}
-              onChange={handleChange}
-              required
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-400 outline-none"
-            />
+            <label className="block text-gray-700 mb-2">Phone Number</label>
+            <div className="flex gap-2">
+              {/* Dial Code Dropdown */}
+              <select
+                name="dial_code"
+                value={formData.dial_code}
+                onChange={handleChange}
+                className="w-1/4 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-400 outline-none"
+              >
+                {DIAL_CODES.map((dial) => (
+                  <option key={dial.code} value={dial.code}>
+                    {`${dial.code} (${dial.country})`}
+                  </option>
+                ))}
+              </select>
+
+              {/* Phone Number Input */}
+              <input
+                type="text"
+                name="phone_number"
+                value={formData.phone_number}
+                onChange={handleChange}
+                className="w-3/4 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-400 outline-none"
+                placeholder="Enter phone number"
+                required
+                maxLength={10} // Limit input to 10 digits
+              />
+            </div>
           </div>
 
           {/* Address */}
