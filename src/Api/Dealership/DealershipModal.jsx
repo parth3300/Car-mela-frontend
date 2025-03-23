@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import axios from "axios";
 import { motion } from "framer-motion";
 import { BACKEND_URL } from "../../Constants/constant";
@@ -18,6 +18,26 @@ const DealershipModal = ({
   });
 
   const authToken = localStorage.getItem("authToken");
+
+  // Ref for the modal container
+  const modalRef = useRef(null);
+
+  // Close modal when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (modalRef.current && !modalRef.current.contains(event.target)) {
+        closeModal();
+      }
+    };
+
+    // Attach the event listener
+    document.addEventListener("mousedown", handleClickOutside);
+
+    // Cleanup the event listener
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [closeModal]);
 
   if (!isOpen || !dealership) return null;
 
@@ -72,6 +92,7 @@ const DealershipModal = ({
       {/* Modal Overlay */}
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
         <motion.div
+          ref={modalRef} // Attach the ref to the modal container
           className="bg-white rounded-2xl p-8 w-full max-w-md shadow-lg relative overflow-y-auto"
           initial={{ scale: 0.8, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}

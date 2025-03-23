@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import axios from "axios";
 import { motion, AnimatePresence } from "framer-motion";
 import { BACKEND_URL } from "../../Constants/constant";
@@ -34,14 +34,56 @@ const UpdateCarModal = ({ isOpen, closeModal, car, onUpdateSuccess }) => {
   });
 
   const [file, setFile] = useState(null);
+  const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
   const [companies, setCompanies] = useState([]);
   const [showCompanyModal, setShowCompanyModal] = useState(false);
   const [searchCompanyQuery, setSearchCompanyQuery] = useState("");
   const [searchColorQuery, setSearchColorQuery] = useState("");
   const [colorSuggestions, setColorSuggestions] = useState([]);
   const [companySuggestions, setCompanySuggestions] = useState([]);
+  const [highlightedCompanyIndex, setHighlightedCompanyIndex] = useState(-1);
+  const [highlightedColorIndex, setHighlightedColorIndex] = useState(-1);
+
+  // Refs for the modals
+  const modalRef = useRef(null);
+  const companyModalRef = useRef(null);
+
+  // Close modal when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (
+        modalRef.current &&
+        !modalRef.current.contains(event.target) &&
+        (!showCompanyModal || !companyModalRef.current?.contains(event.target))
+      ) {
+        closeModal();
+      }
+    };
+
+    if (!showCompanyModal) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [closeModal, showCompanyModal]);
+
+  // Fetch companies on mount
+  useEffect(() => {
+    const fetchCompanies = async () => {
+      try {
+        const response = await axios.get(`${BACKEND_URL}/store/companies/`);
+        setCompanies(response.data);
+      } catch (error) {
+        console.error("Error fetching companies:", error);
+        setMessage("❌ Failed to fetch companies.");
+      }
+    };
+
+    fetchCompanies();
+  }, []);
 
   // Populate form data when car is selected
   useEffect(() => {
@@ -71,27 +113,13 @@ const UpdateCarModal = ({ isOpen, closeModal, car, onUpdateSuccess }) => {
         setSearchColorQuery(car.color);
       }
     }
-  }, [car, companies]); // Add `companies` to the dependency array
-
-  // Fetch companies on mount
-  useEffect(() => {
-    const fetchCompanies = async () => {
-      try {
-        const response = await axios.get(`${BACKEND_URL}/store/companies/`);
-        setCompanies(response.data);
-      } catch (error) {
-        console.error("Error fetching companies:", error);
-        setError("Failed to fetch companies.");
-      }
-    };
-
-    fetchCompanies();
-  }, []);
+  }, [car, companies]);
 
   // Handle company search input change
   const handleCompanySearchChange = (e) => {
     const query = e.target.value;
     setSearchCompanyQuery(query);
+    setHighlightedCompanyIndex(-1);
 
     if (query) {
       const filteredCompanies = companies.filter((company) =>
@@ -105,15 +133,47 @@ const UpdateCarModal = ({ isOpen, closeModal, car, onUpdateSuccess }) => {
 
   // Handle company selection from suggestions
   const handleCompanySelect = (company) => {
-    setFormData({ ...formData, company: company.id });
-    setSearchCompanyQuery(company.title);
-    setCompanySuggestions([]);
+    if (company?.id) {
+      setFormData({ ...formData, company: company.id });
+      setSearchCompanyQuery(company.title);
+      setCompanySuggestions([]);
+    } else {
+      setMessage("❌ Invalid company selected.");
+    }
+  };
+
+  // Handle company keydown events (arrow navigation)
+  const handleCompanyKeyDown = (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      const query = searchCompanyQuery.trim();
+
+      if (companySuggestions.length > 0) {
+        const firstSuggestion = companySuggestions[0];
+        handleCompanySelect(firstSuggestion);
+      } else if (query) {
+        setShowCompanyModal(true);
+      } else {
+        setCompanySuggestions(companies);
+      }
+    } else if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setHighlightedCompanyIndex((prevIndex) =>
+        prevIndex < companySuggestions.length - 1 ? prevIndex + 1 : prevIndex
+      );
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setHighlightedCompanyIndex((prevIndex) =>
+        prevIndex > 0 ? prevIndex - 1 : 0
+      );
+    }
   };
 
   // Handle color search input change
   const handleColorSearchChange = (e) => {
     const query = e.target.value;
     setSearchColorQuery(query);
+    setHighlightedColorIndex(-1);
 
     if (query) {
       const filteredColors = colorNames.filter((color) =>
@@ -132,76 +192,103 @@ const UpdateCarModal = ({ isOpen, closeModal, car, onUpdateSuccess }) => {
     setColorSuggestions([]);
   };
 
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+  // Handle color keydown events (arrow navigation)
+  const handleColorKeyDown = (e) => {
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setHighlightedColorIndex((prevIndex) =>
+        prevIndex < colorSuggestions.length - 1 ? prevIndex + 1 : prevIndex
+      );
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setHighlightedColorIndex((prevIndex) =>
+        prevIndex > 0 ? prevIndex - 1 : 0
+      );
+    } else if (e.key === "Enter" && highlightedColorIndex !== -1) {
+      e.preventDefault();
+      const selectedColor = colorSuggestions[highlightedColorIndex];
+      handleColorSelect(selectedColor);
+    }
   };
 
+  // Handle form input changes
+  const handleChange = (e) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
+
+  // Handle file input change
   const handleFileChange = (e) => {
     setFile(e.target.files[0]);
   };
 
+  // Handle form submission
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
-    setError("");
+    setMessage("");
 
     const authToken = localStorage.getItem("authToken");
+    if (!authToken) {
+      setMessage("❌ Unauthorized! Please log in.");
+      setLoading(false);
+      return;
+    }
+
+    const data = new FormData();
+    if (file) data.append("image", file);
+    data.append("title", formData.title);
+    data.append("company", formData.company);
+    data.append("carmodel", formData.carmodel);
+    data.append("color", formData.color);
+    data.append("registration_year", formData.registration_year);
+    data.append("fuel_type", formData.fuel_type);
+    data.append("mileage", formData.mileage);
+    data.append("description", formData.description);
+    data.append("price", formData.price);
+    data.append("ratings", formData.ratings);
 
     try {
-      const data = new FormData();
-      if (file) data.append("image", file);
-      data.append("title", formData.title);
-      data.append("company", formData.company);
-      data.append("carmodel", formData.carmodel);
-      data.append("color", formData.color);
-      data.append("registration_year", formData.registration_year);
-      data.append("fuel_type", formData.fuel_type);
-      data.append("mileage", formData.mileage);
-      data.append("description", formData.description);
-      data.append("price", formData.price);
-      data.append("ratings", formData.ratings);
-
       const response = await axios.put(
         `${BACKEND_URL}/store/cars/${car.id}/`,
         data,
         {
           headers: {
-            Authorization: `Bearer ${authToken}`,
             "Content-Type": "multipart/form-data",
+            Authorization: `Bearer ${authToken}`,
           },
         }
       );
 
+      setMessage("✅ Car updated successfully!");
       if (onUpdateSuccess) {
         onUpdateSuccess(response.data);
       }
 
-      setError("Car updated successfully! 🎉");
       setTimeout(() => {
-        setError(""); // Clear the success message after 5 seconds
-        closeModal(); // Close the modal after 5 seconds
-      }, 5000); // 5-second timeout
+        closeModal();
+      }, 2000);
     } catch (error) {
-      console.error("Error updating car:", error);
-      setError("Failed to update car. Please try again.");
-      setTimeout(() => {
-        setError(""); // Clear the error message after 5 seconds
-      }, 5000); // 5-second timeout
+      console.error("❌ Error updating car:", error);
+      setMessage("❌ Failed to update car. Please try again.");
     } finally {
       setLoading(false);
     }
   };
 
+  // Handle company creation
   const handleCompanyCreated = (newCompany) => {
-    setCompanies((prev) => [...prev, newCompany]);
-    setFormData((prev) => ({ ...prev, company: newCompany.id }));
-    setShowCompanyModal(false);
+    if (newCompany?.id) {
+      setCompanies((prev) => [...prev, newCompany]);
+      setFormData((prev) => ({ ...prev, company: newCompany.id }));
+      setSearchCompanyQuery(newCompany.title);
+      setShowCompanyModal(false);
+    } else {
+      setMessage("❌ Failed to create company.");
+    }
   };
 
   return (
     <>
-      {/* MAIN FORM MODAL */}
       <AnimatePresence>
         {isOpen && (
           <motion.div
@@ -211,12 +298,12 @@ const UpdateCarModal = ({ isOpen, closeModal, car, onUpdateSuccess }) => {
             exit={{ opacity: 0 }}
           >
             <motion.div
+              ref={modalRef}
               className="bg-white rounded-2xl shadow-xl p-8 w-full max-w-3xl relative"
               initial={{ scale: 0.8, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.8, opacity: 0 }}
             >
-              {/* Close Button */}
               <button
                 onClick={closeModal}
                 className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition"
@@ -229,8 +316,7 @@ const UpdateCarModal = ({ isOpen, closeModal, car, onUpdateSuccess }) => {
               </h2>
 
               <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-                {/* File Upload */}
-                <div>
+                <div className="w-full">
                   <label className="block text-gray-700">Car Image:</label>
                   <input
                     type="file"
@@ -240,11 +326,8 @@ const UpdateCarModal = ({ isOpen, closeModal, car, onUpdateSuccess }) => {
                   />
                 </div>
 
-                {/* Two-Column Grid for Form Fields */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {/* Left Column */}
                   <div className="space-y-4">
-                    {/* Title */}
                     <div>
                       <label className="block text-gray-700">Title:</label>
                       <input
@@ -257,7 +340,6 @@ const UpdateCarModal = ({ isOpen, closeModal, car, onUpdateSuccess }) => {
                       />
                     </div>
 
-                    {/* Company Search with Suggestions */}
                     <div>
                       <label className="block text-gray-700">Company:</label>
                       <div className="relative">
@@ -266,33 +348,33 @@ const UpdateCarModal = ({ isOpen, closeModal, car, onUpdateSuccess }) => {
                           placeholder="Search company..."
                           value={searchCompanyQuery}
                           onChange={handleCompanySearchChange}
+                          onKeyDown={handleCompanyKeyDown}
                           className="w-full p-2 border rounded-md"
+                          required
                         />
-                        {/* Show company suggestions */}
                         {companySuggestions.length > 0 && (
                           <div className="absolute z-10 mt-1 w-full bg-white border border-gray-300 rounded-md shadow-lg">
-                            {companySuggestions.map((company) => (
+                            {companySuggestions.map((company, index) => (
                               <div
                                 key={company.id}
                                 onClick={() => handleCompanySelect(company)}
-                                className="p-2 hover:bg-gray-100 cursor-pointer"
+                                className={`p-2 hover:bg-gray-100 cursor-pointer ${
+                                  index === highlightedCompanyIndex ? "bg-gray-200" : ""
+                                }`}
                               >
                                 {company.title}
                               </div>
                             ))}
                           </div>
                         )}
+                        {searchCompanyQuery && companySuggestions.length === 0 && (
+                          <p className="text-sm text-gray-500 mt-1">
+                            Company is not available. Press <span className="font-semibold">Enter</span> to create company.
+                          </p>
+                        )}
                       </div>
-                      <button
-                        type="button"
-                        onClick={() => setShowCompanyModal(true)}
-                        className="mt-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
-                      >
-                        + Add Company
-                      </button>
                     </div>
 
-                    {/* Car Model */}
                     <div>
                       <label className="block text-gray-700">Car Model:</label>
                       <input
@@ -305,7 +387,6 @@ const UpdateCarModal = ({ isOpen, closeModal, car, onUpdateSuccess }) => {
                       />
                     </div>
 
-                    {/* Color Search with Suggestions */}
                     <div>
                       <label className="block text-gray-700">Color:</label>
                       <div className="relative">
@@ -314,16 +395,18 @@ const UpdateCarModal = ({ isOpen, closeModal, car, onUpdateSuccess }) => {
                           placeholder="Search color..."
                           value={searchColorQuery}
                           onChange={handleColorSearchChange}
+                          onKeyDown={handleColorKeyDown}
                           className="w-full p-2 border rounded-md"
                         />
-                        {/* Show color suggestions */}
                         {colorSuggestions.length > 0 && (
                           <div className="absolute z-10 mt-1 w-full bg-white border border-gray-300 rounded-md shadow-lg">
-                            {colorSuggestions.map((color) => (
+                            {colorSuggestions.map((color, index) => (
                               <div
                                 key={color}
                                 onClick={() => handleColorSelect(color)}
-                                className="p-2 hover:bg-gray-100 cursor-pointer"
+                                className={`p-2 hover:bg-gray-100 cursor-pointer ${
+                                  index === highlightedColorIndex ? "bg-gray-200" : ""
+                                }`}
                               >
                                 {color}
                               </div>
@@ -334,9 +417,7 @@ const UpdateCarModal = ({ isOpen, closeModal, car, onUpdateSuccess }) => {
                     </div>
                   </div>
 
-                  {/* Right Column */}
                   <div className="space-y-4">
-                    {/* Registration Year Dropdown */}
                     <div>
                       <label className="block text-gray-700">Registration Year:</label>
                       <select
@@ -357,7 +438,6 @@ const UpdateCarModal = ({ isOpen, closeModal, car, onUpdateSuccess }) => {
                       </select>
                     </div>
 
-                    {/* Fuel Type Dropdown */}
                     <div>
                       <label className="block text-gray-700">Fuel Type:</label>
                       <select
@@ -376,7 +456,6 @@ const UpdateCarModal = ({ isOpen, closeModal, car, onUpdateSuccess }) => {
                       </select>
                     </div>
 
-                    {/* Mileage */}
                     <div>
                       <label className="block text-gray-700">Mileage:</label>
                       <input
@@ -389,7 +468,6 @@ const UpdateCarModal = ({ isOpen, closeModal, car, onUpdateSuccess }) => {
                       />
                     </div>
 
-                    {/* Price */}
                     <div>
                       <label className="block text-gray-700">Price:</label>
                       <input
@@ -402,7 +480,6 @@ const UpdateCarModal = ({ isOpen, closeModal, car, onUpdateSuccess }) => {
                       />
                     </div>
 
-                    {/* Ratings Dropdown */}
                     <div>
                       <label className="block text-gray-700">Ratings:</label>
                       <select
@@ -423,7 +500,6 @@ const UpdateCarModal = ({ isOpen, closeModal, car, onUpdateSuccess }) => {
                   </div>
                 </div>
 
-                {/* Description (Full Width) */}
                 <div>
                   <label className="block text-gray-700">Description:</label>
                   <textarea
@@ -435,7 +511,6 @@ const UpdateCarModal = ({ isOpen, closeModal, car, onUpdateSuccess }) => {
                   />
                 </div>
 
-                {/* Submit Button */}
                 <button
                   type="submit"
                   disabled={loading}
@@ -449,13 +524,13 @@ const UpdateCarModal = ({ isOpen, closeModal, car, onUpdateSuccess }) => {
                 </button>
               </form>
 
-              {error && (
+              {message && (
                 <p
                   className={`text-center mt-4 ${
-                    error.startsWith("Car updated") ? "text-green-600" : "text-red-600"
+                    message.startsWith("✅") ? "text-green-600" : "text-red-600"
                   }`}
                 >
-                  {error}
+                  {message}
                 </p>
               )}
             </motion.div>
@@ -463,14 +538,16 @@ const UpdateCarModal = ({ isOpen, closeModal, car, onUpdateSuccess }) => {
         )}
       </AnimatePresence>
 
-      {/* COMPANY CREATION MODAL */}
-      {showCompanyModal && (
-        <CreateCompanyModal
-          isOpen={showCompanyModal}
-          onClose={() => setShowCompanyModal(false)}
-          onCreated={handleCompanyCreated}
-        />
-      )}
+      <AnimatePresence>
+        {showCompanyModal && (
+          <CreateCompanyModal
+            isOpen={showCompanyModal}
+            onClose={() => setShowCompanyModal(false)}
+            onCreated={handleCompanyCreated}
+            modalRef={companyModalRef}
+          />
+        )}
+      </AnimatePresence>
     </>
   );
 };

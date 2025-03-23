@@ -57,6 +57,30 @@ const CarDetails = () => {
     setShowReviewForm((prev) => !prev);
   };
 
+  const handleDeleteReview = async (reviewId) => {
+    try {
+      await axios.delete(`${BACKEND_URL}/store/cars/${id}/reviews/${reviewId}/`, {
+        headers: {
+          Authorization: `Bearer ${authToken}`,
+        },
+      });
+  
+      setNotification({
+        message: "Review deleted successfully!",
+        type: "success",
+      });
+  
+      // Refetch the reviews to update the list
+      fetchCar();
+    } catch (error) {
+      console.error("Error deleting review:", error);
+      setNotification({
+        message: "Failed to delete review. Please try again.",
+        type: "error",
+      });
+    }
+  };
+
   const handleReviewChange = (e) => {
     const { name, value } = e.target;
     setNewReview((prev) => ({ ...prev, [name]: value }));
@@ -214,6 +238,29 @@ const CarDetails = () => {
         type: "loading",
       });
   
+      const balance_deduct = new FormData();
+
+      balance_deduct.append("balance", carowner.balance - car.price);
+      balance_deduct.append("phone_number", carowner.phone_number);
+      balance_deduct.append("user", carowner.user);
+
+      console.log(carowner.balance,car.price);
+      
+      if(carowner.balance < car.price){
+        setNotification({
+          message: "You do not have enough balance!",
+          type: "error",
+        });
+        return
+      }
+      const response = await axios.put(`${BACKEND_URL}/store/carowners/${carowner.id}/`, balance_deduct, {
+        headers: {
+          Authorization: `Bearer ${authToken}`,
+          "Content-Type": "multipart/form-data",
+        },
+      });
+
+
       // ✅ Step 2: Proceed with car purchase
       const csrfToken = getCookie("csrftoken");
   
@@ -229,6 +276,7 @@ const CarDetails = () => {
         },
       });
   
+
       setNotification({
         message: "Car purchase successful! 🎉",
         type: "success",
@@ -346,11 +394,23 @@ const CarDetails = () => {
               <ul className="space-y-4 mb-6">
                 {reviews.map((review) => (
                   <li key={review.id} className="border-b pb-2">
-                    <div className="font-semibold text-gray-700">
-                      {review.user_name || review.name}
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <div className="font-semibold text-gray-700">
+                          {review.user_name || review.name}
+                        </div>
+                        <StarRating rating={review.ratings} />
+                        <p className="text-gray-600">{review.description}</p>
+                      </div>
+                      {authToken && review.user === user_id && (
+                        <button
+                          onClick={() => handleDeleteReview(review.id)}
+                          className="text-red-500 hover:text-red-700"
+                        >
+                          Delete
+                        </button>
+                      )}
                     </div>
-                    <StarRating rating={review.ratings} />
-                    <p className="text-gray-600">{review.description}</p>
                   </li>
                 ))}
               </ul>
@@ -500,21 +560,24 @@ const CarDetails = () => {
           </div>
 
           <div className="flex flex-col lg:flex-row gap-4">
+            {/* Buy Now Button */}
             <motion.button
               onClick={handleBuyNow}
-              disabled={buttonLoading}
-              className={`w-full py-4 ${
-                buttonLoading
-                  ? "bg-gray-400"
-                  : "bg-indigo-600 hover:bg-indigo-700"
-              } text-white text-lg font-semibold rounded-lg shadow-md`}
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
+              disabled={buttonLoading || car.carowner} // Disable if processing OR already sold
+              className={`w-full py-4 text-white text-lg font-semibold rounded-lg shadow-md transition-all duration-300
+                ${car.carowner || buttonLoading ? "bg-gray-400 cursor-not-allowed" : "bg-indigo-600 hover:bg-indigo-700"}
+              `}
+              whileHover={!(car.carowner || buttonLoading) ? { scale: 1.05 } : {}}
+              whileTap={!(car.carowner || buttonLoading) ? { scale: 0.95 } : {}}
             >
-              {buttonLoading ? "Processing..." : "Buy Now"}
+              {car.carowner
+                ? "Sold Out"
+                : buttonLoading
+                ? "Processing..."
+                : "Buy Now"}
             </motion.button>
 
-            {/* Show Delete Car button only if user is the owner and car id is NOT 8, 9, or 10 */}
+            {/* Delete Car Button */}
             {authToken &&
               user_id &&
               carowner_user_id &&
@@ -523,17 +586,17 @@ const CarDetails = () => {
                 <motion.button
                   onClick={() => setShowDeleteConfirm(true)}
                   disabled={buttonLoading}
-                  className={`w-full py-4 ${
-                    buttonLoading ? "bg-gray-400" : "bg-red-600 hover:bg-red-700"
-                  } text-white text-lg font-semibold rounded-lg shadow-md`}
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
+                  className={`w-full py-4 text-white text-lg font-semibold rounded-lg shadow-md transition-all duration-300
+                    ${buttonLoading ? "bg-gray-400 cursor-not-allowed" : "bg-red-600 hover:bg-red-700"}
+                  `}
+                  whileHover={!buttonLoading ? { scale: 1.05 } : {}}
+                  whileTap={!buttonLoading ? { scale: 0.95 } : {}}
                 >
                   Delete Car
                 </motion.button>
               )}
-
           </div>
+
         </div>
       </motion.div>
 

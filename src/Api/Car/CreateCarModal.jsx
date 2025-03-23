@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import axios from "axios";
 import { BACKEND_URL } from "../../Constants/constant";
 import { motion, AnimatePresence } from "framer-motion";
@@ -38,10 +38,40 @@ const CreateCarModal = ({ isOpen, closeModal, onCreateSuccess }) => {
   const [loading, setLoading] = useState(false);
   const [companies, setCompanies] = useState([]);
   const [showCompanyModal, setShowCompanyModal] = useState(false);
-  const [searchCompanyQuery, setSearchCompanyQuery] = useState(""); // For company search
-  const [searchColorQuery, setSearchColorQuery] = useState(""); // For color search
-  const [colorSuggestions, setColorSuggestions] = useState([]); // For color suggestions
-  const [companySuggestions, setCompanySuggestions] = useState([]); // For company suggestions
+  const [searchCompanyQuery, setSearchCompanyQuery] = useState("");
+  const [searchColorQuery, setSearchColorQuery] = useState("");
+  const [colorSuggestions, setColorSuggestions] = useState([]);
+  const [companySuggestions, setCompanySuggestions] = useState([]);
+  const [highlightedCompanyIndex, setHighlightedCompanyIndex] = useState(-1);
+  const [highlightedColorIndex, setHighlightedColorIndex] = useState(-1);
+
+  // Refs for the modals
+  const modalRef = useRef(null);
+  const companyModalRef = useRef(null);
+
+  // Close modal when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      // Check if the click is outside the CreateCarModal and CreateCompanyModal
+      if (
+        modalRef.current &&
+        !modalRef.current.contains(event.target) &&
+        (!showCompanyModal || !companyModalRef.current?.contains(event.target))
+      ) {
+        closeModal();
+      }
+    };
+
+    // Attach the event listener only if the CreateCompanyModal is not open
+    if (!showCompanyModal) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+
+    // Cleanup the event listener
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [closeModal, showCompanyModal]); // Add showCompanyModal as a dependency
 
   useEffect(() => {
     const fetchCompanies = async () => {
@@ -57,12 +87,11 @@ const CreateCarModal = ({ isOpen, closeModal, onCreateSuccess }) => {
     fetchCompanies();
   }, []);
 
-  // Handle company search input change
   const handleCompanySearchChange = (e) => {
     const query = e.target.value;
     setSearchCompanyQuery(query);
+    setHighlightedCompanyIndex(-1); // Reset highlighted index
 
-    // Filter companies based on the search query
     if (query) {
       const filteredCompanies = companies.filter((company) =>
         company.title.toLowerCase().includes(query.toLowerCase())
@@ -73,19 +102,51 @@ const CreateCarModal = ({ isOpen, closeModal, onCreateSuccess }) => {
     }
   };
 
-  // Handle company selection from suggestions
   const handleCompanySelect = (company) => {
-    setFormData({ ...formData, company: company.id });
-    setSearchCompanyQuery(company.title);
-    setCompanySuggestions([]); // Clear suggestions after selection
+    if (company?.id) {
+      setFormData({ ...formData, company: company.id });
+      setSearchCompanyQuery(company.title);
+      setCompanySuggestions([]);
+    } else {
+      setMessage("❌ Invalid company selected.");
+    }
   };
 
-  // Handle color search input change
+  const handleCompanyKeyDown = (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault(); // Prevent form submission
+  
+      const query = searchCompanyQuery.trim();
+  
+      if (companySuggestions.length > 0) {
+        // If there are suggestions, select the first one
+        const firstSuggestion = companySuggestions[0];
+        handleCompanySelect(firstSuggestion);
+      } else if (query) {
+        // If no suggestions and the query is not empty, open the CreateCompanyModal
+        setShowCompanyModal(true);
+      } else {
+        // If the input is empty, show all companies
+        setCompanySuggestions(companies);
+      }
+    } else if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setHighlightedCompanyIndex((prevIndex) =>
+        prevIndex < companySuggestions.length - 1 ? prevIndex + 1 : prevIndex
+      );
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setHighlightedCompanyIndex((prevIndex) =>
+        prevIndex > 0 ? prevIndex - 1 : 0
+      );
+    }
+  };
+
   const handleColorSearchChange = (e) => {
     const query = e.target.value;
     setSearchColorQuery(query);
+    setHighlightedColorIndex(-1); // Reset highlighted index
 
-    // Filter color names based on the search query
     if (query) {
       const filteredColors = colorNames.filter((color) =>
         color.toLowerCase().includes(query.toLowerCase())
@@ -96,11 +157,28 @@ const CreateCarModal = ({ isOpen, closeModal, onCreateSuccess }) => {
     }
   };
 
-  // Handle color selection from suggestions
+  const handleColorKeyDown = (e) => {
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setHighlightedColorIndex((prevIndex) =>
+        prevIndex < colorSuggestions.length - 1 ? prevIndex + 1 : prevIndex
+      );
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setHighlightedColorIndex((prevIndex) =>
+        prevIndex > 0 ? prevIndex - 1 : 0
+      );
+    } else if (e.key === "Enter" && highlightedColorIndex !== -1) {
+      e.preventDefault();
+      const selectedColor = colorSuggestions[highlightedColorIndex];
+      handleColorSelect(selectedColor);
+    }
+  };
+
   const handleColorSelect = (color) => {
     setFormData({ ...formData, color });
     setSearchColorQuery(color);
-    setColorSuggestions([]); // Clear suggestions after selection
+    setColorSuggestions([]);
   };
 
   const handleChange = (e) => {
@@ -120,7 +198,7 @@ const CreateCarModal = ({ isOpen, closeModal, onCreateSuccess }) => {
     }
 
     if (!formData.company) {
-      setMessage("❌ Please select a company.");
+      setMessage("❌ Please select or create a company.");
       return;
     }
 
@@ -200,14 +278,17 @@ const CreateCarModal = ({ isOpen, closeModal, onCreateSuccess }) => {
   };
 
   const handleCompanyCreated = (newCompany) => {
-    setCompanies((prev) => [...prev, newCompany]);
-    setFormData((prev) => ({ ...prev, company: newCompany.id }));
-    setShowCompanyModal(false);
+    if (newCompany?.id) {
+      setCompanies((prev) => [...prev, newCompany]);
+      setFormData((prev) => ({ ...prev, company: newCompany.id }));
+      setSearchCompanyQuery(newCompany.title);
+      setShowCompanyModal(false); // Close the modal
+    } else {
+      setMessage("❌ Failed to create company.");
+    }
   };
-
   return (
     <>
-      {/* MAIN FORM MODAL */}
       <AnimatePresence>
         {isOpen && (
           <motion.div
@@ -217,12 +298,12 @@ const CreateCarModal = ({ isOpen, closeModal, onCreateSuccess }) => {
             exit={{ opacity: 0 }}
           >
             <motion.div
+              ref={modalRef} // Attach the ref to the modal container
               className="bg-white rounded-2xl shadow-xl p-8 w-full max-w-3xl relative"
               initial={{ scale: 0.8, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.8, opacity: 0 }}
             >
-              {/* ❌ Close Button */}
               <button
                 onClick={() => {
                   setMessage("");
@@ -238,7 +319,6 @@ const CreateCarModal = ({ isOpen, closeModal, onCreateSuccess }) => {
               </h2>
 
               <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-                {/* File Upload */}
                 <div className="w-full">
                   <label className="block text-gray-700">Car Image:</label>
                   <input
@@ -250,11 +330,8 @@ const CreateCarModal = ({ isOpen, closeModal, onCreateSuccess }) => {
                   />
                 </div>
 
-                {/* Two-Column Grid for Form Fields */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {/* Left Column */}
                   <div className="space-y-4">
-                    {/* Title */}
                     <div>
                       <label className="block text-gray-700">Title:</label>
                       <input
@@ -267,7 +344,6 @@ const CreateCarModal = ({ isOpen, closeModal, onCreateSuccess }) => {
                       />
                     </div>
 
-                    {/* Company Search with Suggestions */}
                     <div>
                       <label className="block text-gray-700">Company:</label>
                       <div className="relative">
@@ -276,33 +352,33 @@ const CreateCarModal = ({ isOpen, closeModal, onCreateSuccess }) => {
                           placeholder="Search company..."
                           value={searchCompanyQuery}
                           onChange={handleCompanySearchChange}
+                          onKeyDown={handleCompanyKeyDown}
                           className="w-full p-2 border rounded-md"
+                          required
                         />
-                        {/* Show company suggestions */}
                         {companySuggestions.length > 0 && (
                           <div className="absolute z-10 mt-1 w-full bg-white border border-gray-300 rounded-md shadow-lg">
-                            {companySuggestions.map((company) => (
+                            {companySuggestions.map((company, index) => (
                               <div
                                 key={company.id}
                                 onClick={() => handleCompanySelect(company)}
-                                className="p-2 hover:bg-gray-100 cursor-pointer"
+                                className={`p-2 hover:bg-gray-100 cursor-pointer ${
+                                  index === highlightedCompanyIndex ? "bg-gray-200" : ""
+                                }`}
                               >
                                 {company.title}
                               </div>
                             ))}
                           </div>
                         )}
+                        {/* Show message if no company is found */}
+                        {searchCompanyQuery && companySuggestions.length === 0 && (
+                          <p className="text-sm text-gray-500 mt-1">
+                            Company is not available. Press <span className="font-semibold">Enter</span> to create company.
+                          </p>
+                        )}
                       </div>
-                      <button
-                        type="button"
-                        onClick={() => setShowCompanyModal(true)}
-                        className="mt-2 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
-                      >
-                        + Add Company
-                      </button>
                     </div>
-
-                    {/* Car Model */}
                     <div>
                       <label className="block text-gray-700">Car Model:</label>
                       <input
@@ -315,7 +391,6 @@ const CreateCarModal = ({ isOpen, closeModal, onCreateSuccess }) => {
                       />
                     </div>
 
-                    {/* Color Search with Suggestions */}
                     <div>
                       <label className="block text-gray-700">Color:</label>
                       <div className="relative">
@@ -324,16 +399,18 @@ const CreateCarModal = ({ isOpen, closeModal, onCreateSuccess }) => {
                           placeholder="Search color..."
                           value={searchColorQuery}
                           onChange={handleColorSearchChange}
+                          onKeyDown={handleColorKeyDown}
                           className="w-full p-2 border rounded-md"
                         />
-                        {/* Show color suggestions */}
                         {colorSuggestions.length > 0 && (
                           <div className="absolute z-10 mt-1 w-full bg-white border border-gray-300 rounded-md shadow-lg">
-                            {colorSuggestions.map((color) => (
+                            {colorSuggestions.map((color, index) => (
                               <div
                                 key={color}
                                 onClick={() => handleColorSelect(color)}
-                                className="p-2 hover:bg-gray-100 cursor-pointer"
+                                className={`p-2 hover:bg-gray-100 cursor-pointer ${
+                                  index === highlightedColorIndex ? "bg-gray-200" : ""
+                                }`}
                               >
                                 {color}
                               </div>
@@ -344,9 +421,7 @@ const CreateCarModal = ({ isOpen, closeModal, onCreateSuccess }) => {
                     </div>
                   </div>
 
-                  {/* Right Column */}
                   <div className="space-y-4">
-                    {/* Registration Year Dropdown */}
                     <div>
                       <label className="block text-gray-700">Registration Year:</label>
                       <select
@@ -358,7 +433,7 @@ const CreateCarModal = ({ isOpen, closeModal, onCreateSuccess }) => {
                       >
                         <option value="">Select a year</option>
                         {Array.from({ length: 26 }, (_, i) => 2000 + i)
-                          .reverse() // Reverse the array to show 2025 first
+                          .reverse()
                           .map((year) => (
                             <option key={year} value={year}>
                               {year}
@@ -367,7 +442,6 @@ const CreateCarModal = ({ isOpen, closeModal, onCreateSuccess }) => {
                       </select>
                     </div>
 
-                    {/* Fuel Type Dropdown */}
                     <div>
                       <label className="block text-gray-700">Fuel Type:</label>
                       <select
@@ -386,7 +460,6 @@ const CreateCarModal = ({ isOpen, closeModal, onCreateSuccess }) => {
                       </select>
                     </div>
 
-                    {/* Mileage */}
                     <div>
                       <label className="block text-gray-700">Mileage:</label>
                       <input
@@ -399,7 +472,6 @@ const CreateCarModal = ({ isOpen, closeModal, onCreateSuccess }) => {
                       />
                     </div>
 
-                    {/* Price */}
                     <div>
                       <label className="block text-gray-700">Price:</label>
                       <input
@@ -412,7 +484,6 @@ const CreateCarModal = ({ isOpen, closeModal, onCreateSuccess }) => {
                       />
                     </div>
 
-                    {/* Ratings Dropdown */}
                     <div>
                       <label className="block text-gray-700">Ratings:</label>
                       <select
@@ -433,7 +504,6 @@ const CreateCarModal = ({ isOpen, closeModal, onCreateSuccess }) => {
                   </div>
                 </div>
 
-                {/* Description (Full Width) */}
                 <div>
                   <label className="block text-gray-700">Description:</label>
                   <textarea
@@ -445,7 +515,6 @@ const CreateCarModal = ({ isOpen, closeModal, onCreateSuccess }) => {
                   />
                 </div>
 
-                {/* Submit Button */}
                 <button
                   type="submit"
                   disabled={loading}
@@ -473,14 +542,18 @@ const CreateCarModal = ({ isOpen, closeModal, onCreateSuccess }) => {
         )}
       </AnimatePresence>
 
-      {/* COMPANY CREATION MODAL */}
-      {showCompanyModal && (
-        <CreateCompanyModal
-          isOpen={showCompanyModal}
-          onClose={() => setShowCompanyModal(false)}
-          onCreated={handleCompanyCreated}
-        />
-      )}
+      {/* CreateCompanyModal with smooth closing */}
+      <AnimatePresence>
+        {showCompanyModal && (
+          <CreateCompanyModal
+            isOpen={showCompanyModal}
+            onClose={() => setShowCompanyModal(false)}
+            onCreated={handleCompanyCreated}
+            modalRef={companyModalRef}
+            initialTitle={searchCompanyQuery} // Pass the search query as the initial title
+          />
+        )}
+      </AnimatePresence>
     </>
   );
 };

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import axios from "axios";
 import { BACKEND_URL } from "../../Constants/constant";
 import { motion } from "framer-motion";
@@ -17,6 +17,26 @@ const CreateDealershipModal = ({ onClose, onCreated }) => {
   const [showSuggestions, setShowSuggestions] = useState(false); // State to show/hide suggestions
 
   const authToken = localStorage.getItem("authToken");
+
+  // Ref for the modal container
+  const modalRef = useRef(null);
+
+  // Handle clicks outside the modal
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (modalRef.current && !modalRef.current.contains(event.target)) {
+        onClose(); // Close the modal if clicked outside
+      }
+    };
+
+    // Add event listener when the modal is mounted
+    document.addEventListener("mousedown", handleClickOutside);
+
+    // Clean up the event listener when the modal is unmounted
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [onClose]);
 
   // Fetch address suggestions from OpenStreetMap (Nominatim)
   const fetchAddressSuggestions = async (query) => {
@@ -110,6 +130,7 @@ const CreateDealershipModal = ({ onClose, onCreated }) => {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
       <motion.div
+        ref={modalRef} // Attach the ref to the modal container
         initial={{ scale: 0.8, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         exit={{ scale: 0.8, opacity: 0 }}

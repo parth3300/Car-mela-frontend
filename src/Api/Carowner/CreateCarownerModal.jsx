@@ -1,17 +1,35 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import axios from "axios";
 import { jwtDecode } from "jwt-decode";
 import { motion, AnimatePresence } from "framer-motion";
 import { BACKEND_URL } from "../../Constants/constant";
 import { XMarkIcon, CheckCircleIcon } from "@heroicons/react/24/solid";
 
+// Predefined list of dial codes
+const DIAL_CODES = [
+  { code: "+1", country: "USA" },
+  { code: "+91", country: "India" },
+  { code: "+44", country: "UK" },
+  { code: "+61", country: "Australia" },
+  { code: "+81", country: "Japan" },
+  { code: "+86", country: "China" },
+  { code: "+33", country: "France" },
+  { code: "+49", country: "Germany" },
+  { code: "+7", country: "Russia" },
+  { code: "+52", country: "Mexico" },
+];
+
 const CreateCarOwnerModal = ({ isOpen, closeModal, onCreateSuccess, setNotification }) => {
-  const [formData, setFormData] = useState({ contact: "" });
+  const [formData, setFormData] = useState({ dial_code: "+1", phone_number: "" }); // Default dial code
   const [profilePic, setProfilePic] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [userId, setUserId] = useState("");
+
+  // Ref for the modal container
+  const modalRef = useRef(null);
+  const successModalRef = useRef(null);
 
   // ✅ Get user id from token on mount
   useEffect(() => {
@@ -39,7 +57,14 @@ const CreateCarOwnerModal = ({ isOpen, closeModal, onCreateSuccess, setNotificat
   // ✅ Form input handlers
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+
+    if (name === "phone_number") {
+      // Allow only numeric input and limit to 10 digits
+      const numericValue = value.replace(/\D/g, "").slice(0, 10);
+      setFormData((prev) => ({ ...prev, [name]: numericValue }));
+    } else {
+      setFormData((prev) => ({ ...prev, [name]: value }));
+    }
   };
 
   const handleFileChange = (e) => {
@@ -60,6 +85,12 @@ const CreateCarOwnerModal = ({ isOpen, closeModal, onCreateSuccess, setNotificat
       return;
     }
 
+    // Validate phone number field to ensure it has exactly 10 digits
+    if (formData.phone_number.length !== 10) {
+      setError("❌ Phone number must be exactly 10 digits.");
+      return;
+    }
+
     setLoading(true);
     setError("");
 
@@ -68,7 +99,8 @@ const CreateCarOwnerModal = ({ isOpen, closeModal, onCreateSuccess, setNotificat
     try {
       const data = new FormData();
       data.append("user", userId);
-      data.append("contact", formData.contact);
+      data.append("dial_code", formData.dial_code);
+      data.append("phone_number", formData.phone_number);
       data.append("profile_pic", profilePic);
 
       const response = await axios.post(`${BACKEND_URL}/store/carowners/`, data, {
@@ -79,7 +111,7 @@ const CreateCarOwnerModal = ({ isOpen, closeModal, onCreateSuccess, setNotificat
       });
 
       // Reset form data
-      setFormData({ contact: "" });
+      setFormData({ dial_code: "+1", phone_number: "" });
       setProfilePic(null);
 
       // ✅ Show success modal
@@ -128,6 +160,32 @@ const CreateCarOwnerModal = ({ isOpen, closeModal, onCreateSuccess, setNotificat
     closeModal();
   };
 
+  // ✅ Handle clicking outside the modal
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (
+        modalRef.current &&
+        !modalRef.current.contains(event.target) &&
+        isOpen
+      ) {
+        closeModal();
+      }
+      if (
+        successModalRef.current &&
+        !successModalRef.current.contains(event.target) &&
+        showSuccessModal
+      ) {
+        handleSuccessClose();
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [isOpen, showSuccessModal, closeModal]);
+
   return (
     <>
       {/* MAIN FORM MODAL */}
@@ -140,6 +198,7 @@ const CreateCarOwnerModal = ({ isOpen, closeModal, onCreateSuccess, setNotificat
             exit={{ opacity: 0 }}
           >
             <motion.div
+              ref={modalRef}
               className="bg-white rounded-2xl shadow-xl p-8 w-full max-w-md relative"
               initial={{ scale: 0.8, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
@@ -160,20 +219,47 @@ const CreateCarOwnerModal = ({ isOpen, closeModal, onCreateSuccess, setNotificat
                 Become Car Owner
               </h2>
 
+              {/* Bonus Message */}
+              <div className="bg-green-100 border-l-4 border-green-500 text-green-700 p-4 mb-6 rounded-lg">
+                <p className="text-sm">
+                  🎉 <strong>Bonus:</strong> You'll get 1 million balance for becoming a carowner!
+                </p>
+              </div>
+
               <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+                {/* Combined Dial Code and Phone Number Field */}
                 <div>
-                  <label className="block text-gray-700 mb-2">Contact</label>
-                  <input
-                    type="text"
-                    name="contact"
-                    value={formData.contact}
-                    onChange={handleChange}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-400 outline-none"
-                    placeholder="Enter your contact"
-                    required
-                  />
+                  <label className="block text-gray-700 mb-2">Phone Number</label>
+                  <div className="flex gap-2">
+                    {/* Dial Code Dropdown */}
+                    <select
+                      name="dial_code"
+                      value={formData.dial_code}
+                      onChange={handleChange}
+                      className="w-1/4 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-400 outline-none"
+                    >
+                      {DIAL_CODES.map((dial) => (
+                        <option key={dial.code} value={dial.code}>
+                          {dial.code} ({dial.country})
+                        </option>
+                      ))}
+                    </select>
+
+                    {/* Phone Number Input */}
+                    <input
+                      type="text"
+                      name="phone_number"
+                      value={formData.phone_number}
+                      onChange={handleChange}
+                      className="w-3/4 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-400 outline-none"
+                      placeholder="Enter phone number"
+                      required
+                      maxLength={10} // Limit input to 10 digits
+                    />
+                  </div>
                 </div>
 
+                {/* Profile Picture Field */}
                 <div>
                   <label className="block text-gray-700 mb-2">Profile Picture</label>
                   <input
@@ -229,6 +315,7 @@ const CreateCarOwnerModal = ({ isOpen, closeModal, onCreateSuccess, setNotificat
             exit={{ opacity: 0 }}
           >
             <motion.div
+              ref={successModalRef}
               className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-sm text-center relative"
               initial={{ scale: 0.7, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}

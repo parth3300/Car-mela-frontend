@@ -1,7 +1,8 @@
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { motion } from "framer-motion";
 import axios from "axios";
 import { BACKEND_URL } from "../../Constants/constant";
+import { countries } from "countries-list"; // Import the countries dataset
 
 const CreateCompanyModal = ({ onClose, onCreated }) => {
   const [title, setTitle] = useState("");
@@ -10,7 +11,36 @@ const CreateCompanyModal = ({ onClose, onCreated }) => {
   const [since, setSince] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null); // State to store backend errors
+  const [searchQuery, setSearchQuery] = useState(""); // For country search
+  const [filteredCountries, setFilteredCountries] = useState([]); // Filtered countries
+  const [showDropdown, setShowDropdown] = useState(false); // Show/hide dropdown
   const authToken = localStorage.getItem("authToken");
+
+  // Ref for the modal container
+  const modalRef = useRef(null);
+
+  // Convert countries object to an array
+  const allCountries = Object.values(countries).map((country) => ({
+    name: country.name,
+    code: country.code,
+  }));
+
+  // Handle clicks outside the modal
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (modalRef.current && !modalRef.current.contains(event.target)) {
+        onClose(); // Close the modal if clicked outside
+      }
+    };
+
+    // Add event listener when the modal is mounted
+    document.addEventListener("mousedown", handleClickOutside);
+
+    // Clean up the event listener when the modal is unmounted
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [onClose]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -66,9 +96,46 @@ const CreateCompanyModal = ({ onClose, onCreated }) => {
     }
   };
 
+  // Handle country search input
+  const handleCountrySearch = (e) => {
+    const query = e.target.value;
+    setSearchQuery(query);
+    setCountry(query); // Update the country state
+
+    if (query) {
+      const filtered = allCountries.filter((country) =>
+        country.name.toLowerCase().includes(query.toLowerCase())
+      );
+      setFilteredCountries(filtered);
+      setShowDropdown(true);
+    } else {
+      setFilteredCountries([]);
+      setShowDropdown(false);
+    }
+  };
+
+  // Handle country selection
+  const handleCountrySelect = (country) => {
+    setCountry(country.name); // Set the selected country
+    setSearchQuery(country.name); // Update the search query
+    setShowDropdown(false); // Hide the dropdown
+  };
+
+  // Handle Enter key press
+  const handleKeyDown = (e) => {
+    if (e.key === "Enter" && filteredCountries.length > 0) {
+      e.preventDefault(); // Prevent form submission
+      const firstCountry = filteredCountries[0];
+      setCountry(firstCountry.name); // Set the first country in the list
+      setSearchQuery(firstCountry.name); // Update the search query
+      setShowDropdown(false); // Hide the dropdown
+    }
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
       <motion.div
+        ref={modalRef} // Attach the ref to the modal container
         initial={{ scale: 0.8, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         exit={{ scale: 0.8, opacity: 0 }}
@@ -113,11 +180,26 @@ const CreateCompanyModal = ({ onClose, onCreated }) => {
             <label className="block text-gray-700 mb-2">Country</label>
             <input
               type="text"
-              value={country}
-              onChange={(e) => setCountry(e.target.value)}
+              value={searchQuery}
+              onChange={handleCountrySearch}
+              onKeyDown={handleKeyDown} // Handle Enter key press
               required
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-400 outline-none"
+              placeholder="Search for a country"
             />
+            {showDropdown && (
+              <div className="mt-2 max-h-48 overflow-y-auto border border-gray-300 rounded-lg">
+                {filteredCountries.map((country) => (
+                  <div
+                    key={country.code}
+                    onClick={() => handleCountrySelect(country)}
+                    className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
+                  >
+                    {country.name}
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Since */}

@@ -2,14 +2,19 @@ import React, { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
-import { useDebouncedCallback } from "use-debounce"; // Import useDebouncedCallback
+import { useDebouncedCallback } from "use-debounce";
 import ButtonStart from "./ui/button";
 import { BACKEND_URL } from "../Constants/constant";
+import SkeletonLoader from "./SkeletonLoader";
+import CreateCarModal from "../Api/Car/CreateCarModal";
+
 
 const Home = () => {
   const navigate = useNavigate();
+  const [isCreateCarModalOpen, setIsCreateCarModalOpen] = useState(false);
   const [cars, setCars] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [notification, setNotification] = useState({ message: "", type: "" }); // For notifications
 
   // Fetch car data from the backend
   useEffect(() => {
@@ -36,9 +41,23 @@ const Home = () => {
     navigate("/cars");
   };
 
-  const handleSellYourCar = () => {
-    navigate("/sell-car");
+  // Handle successful car creation
+  const handleCreateCarSuccess = (newCar) => {
+
+    
+    setCars((prevCars) => [newCar, ...prevCars]);
+    setIsCreateCarModalOpen(false); // Close the modal
+    setNotification({
+      message: "Car created successfully! 🎉",
+      type: "success",
+    });
+
+    // Clear notification after 5 seconds
+    setTimeout(() => {
+      setNotification({ message: "", type: "" });
+    }, 5000);
   };
+
 
   // Debounced handleViewDetails function
   const handleViewDetails = useDebouncedCallback((id) => {
@@ -52,52 +71,82 @@ const Home = () => {
   };
 
   return (
-    <div className="relative w-full min-h-screen flex flex-col items-center justify-center bg-gray-100 p-6">
+    <div className="relative w-full min-h-screen flex flex-col items-center justify-center bg-gray-100">
       {/* Hero Section */}
-      <motion.div
-        initial={{ opacity: 0, y: -50 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.8 }}
-        className="text-center max-w-2xl"
-      >
-        <h1 className="text-5xl font-bold text-gray-800 mb-4">
-          Find Your Dream Car Today
-        </h1>
-        <p className="text-gray-600 text-lg mb-6">
-          Buy and sell cars effortlessly with our seamless platform. Get the
-          best deals and find your perfect ride in just a few clicks.
-        </p>
-
-        {/* Buttons with navigation */}
-        <div className="flex gap-4 justify-center">
-          <ButtonStart
-            className="px-6 py-3 text-lg bg-blue-600 text-white rounded-lg shadow-lg hover:bg-blue-700"
-            onClick={handleBrowseCars}
+      <div className="w-full bg-cover bg-center h-screen flex items-center justify-center relative overflow-hidden">
+        <motion.div
+          initial={{ opacity: 0, y: -50 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.8 }}
+          className="text-center max-w-2xl bg-black bg-opacity-50 p-8 rounded-lg z-10"
+        >
+          <motion.h1
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2, duration: 0.8 }}
+            className="text-5xl font-bold text-white mb-4"
           >
-            Browse Cars
-          </ButtonStart>
-
-          <ButtonStart
-            className="px-6 py-3 text-lg bg-gray-800 text-white rounded-lg shadow-lg hover:bg-gray-900"
-            onClick={handleSellYourCar}
+            Find Your Dream Car Today
+          </motion.h1>
+          <motion.p
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.4, duration: 0.8 }}
+            className="text-white text-lg mb-6"
           >
-            Sell Your Car
-          </ButtonStart>
-        </div>
-      </motion.div>
+            Buy and sell cars effortlessly with our seamless platform. Get the
+            best deals and find your perfect ride in just a few clicks.
+          </motion.p>
+
+          {/* Buttons with navigation */}
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.6, duration: 0.8 }}
+            className="flex gap-4 justify-center"
+          >
+            <ButtonStart
+              className="px-6 py-3 text-lg bg-gradient-to-r from-blue-600 to-blue-500 text-white rounded-lg shadow-lg hover:from-blue-700 hover:to-blue-600 transition-all"
+              onClick={handleBrowseCars}
+            >
+              Browse Cars
+            </ButtonStart>
+
+            <ButtonStart
+              className="px-6 py-3 text-lg bg-gradient-to-r from-gray-800 to-gray-700 text-white rounded-lg shadow-lg hover:from-gray-900 hover:to-gray-800 transition-all"
+              onClick={() => setIsCreateCarModalOpen(true)}
+              >
+              Sell Your Car
+            </ButtonStart>
+          </motion.div>
+        </motion.div>
+
+        {/* Parallax Background */}
+        <motion.div
+          className="absolute inset-0 bg-cover bg-center"
+          style={{ backgroundImage: "url('/path-to-your-hero-image.jpg')" }}
+          initial={{ scale: 1.2 }}
+          animate={{ scale: 1 }}
+          transition={{ duration: 1.5, ease: "easeOut" }}
+        ></motion.div>
+      </div>
 
       {/* Featured Section */}
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ duration: 1.2 }}
-        className="mt-16 w-full max-w-7xl"
+        className="mt-16 w-full max-w-7xl px-4"
       >
-        {loading ? (
-          <div className="flex justify-center items-center h-64">
-            <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-blue-600"></div>
-          </div>
-        ) : (
+        <motion.h2
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2, duration: 0.8 }}
+          className="text-3xl font-bold text-center mb-8"
+        >
+          Featured Cars
+        </motion.h2>
+        {loading ? (<SkeletonLoader />) : (
           <motion.div
             className="grid grid-cols-1 md:grid-cols-3 gap-8"
             initial="hidden"
@@ -115,7 +164,7 @@ const Home = () => {
                 key={car.id}
                 variants={carCardVariants} // Apply animation variants
                 whileHover={{ scale: 1.05 }}
-                className="bg-white p-6 rounded-xl shadow-xl"
+                className="bg-white p-6 rounded-xl shadow-xl hover:shadow-2xl transition-shadow"
               >
                 <img
                   src={car.image} // Assuming the car object has an image property
@@ -126,7 +175,7 @@ const Home = () => {
                 <p className="text-gray-600 mt-2">{car.description}</p>
 
                 <ButtonStart
-                  className="mt-4 w-full bg-blue-600 text-white rounded-lg py-2 hover:bg-blue-700"
+                  className="mt-4 w-full bg-gradient-to-r from-blue-600 to-blue-500 text-white rounded-lg py-2 hover:from-blue-700 hover:to-blue-600 transition-all"
                   onClick={() => handleViewDetails(car.id)} // Debounced click handler
                 >
                   View Details
@@ -136,6 +185,39 @@ const Home = () => {
           </motion.div>
         )}
       </motion.div>
+
+      {/* Testimonials Section */}
+      <div className="w-full bg-gray-800 mt-16 py-12">
+        <motion.h2
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2, duration: 0.8 }}
+          className="text-3xl font-bold text-center text-white mb-8"
+        >
+          What Our Customers Say
+        </motion.h2>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-7xl mx-auto px-4">
+          {[1, 2, 3].map((index) => (
+            <motion.div
+              key={index}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.4 * index, duration: 0.8 }}
+              className="bg-white p-6 rounded-xl shadow-xl hover:shadow-2xl transition-shadow"
+            >
+              <p className="text-gray-600">"I found my dream car in just a few clicks. The process was seamless and hassle-free!"</p>
+              <p className="text-gray-800 font-semibold mt-4">- John Doe</p>
+            </motion.div>
+          ))}
+        </div>
+      </div>
+
+      {/* Create Car Modal */}
+      <CreateCarModal
+        isOpen={isCreateCarModalOpen}
+        closeModal={() => setIsCreateCarModalOpen(false)}
+        onCreateSuccess={handleCreateCarSuccess}
+      />
     </div>
   );
 };

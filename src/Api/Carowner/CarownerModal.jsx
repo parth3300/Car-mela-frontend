@@ -1,8 +1,9 @@
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import axios from "axios";
 import { motion } from "framer-motion";
 import { BACKEND_URL } from "../../Constants/constant";
 import Notification from "../../components/Globle/Notification";
+import { jwtDecode } from "jwt-decode";
 
 const CarownerModal = ({ isOpen, closeModal, carowner, onDeleteSuccess }) => {
   const [loading, setLoading] = useState(false);
@@ -13,7 +14,33 @@ const CarownerModal = ({ isOpen, closeModal, carowner, onDeleteSuccess }) => {
   });
 
   const authToken = localStorage.getItem("authToken");
+  let user_id = "";
+  if (authToken) {
+    let decoded = jwtDecode(authToken);
+    user_id = decoded?.user_id;
+  }
 
+  // Ref for the modal container
+  const modalRef = useRef(null);
+
+  // Handle clicks outside the modal
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (modalRef.current && !modalRef.current.contains(event.target)) {
+        closeModal(); // Close the modal if clicked outside
+      }
+    };
+
+    // Add event listener when the modal is mounted
+    if (isOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+
+    // Clean up the event listener when the modal is unmounted
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [isOpen, closeModal]);
 
   if (!isOpen || !carowner) return null;
 
@@ -68,6 +95,7 @@ const CarownerModal = ({ isOpen, closeModal, carowner, onDeleteSuccess }) => {
       {/* Modal Overlay */}
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
         <motion.div
+          ref={modalRef} // Attach the ref to the modal container
           className="bg-white rounded-2xl p-8 w-full max-w-md shadow-lg relative overflow-y-auto"
           initial={{ scale: 0.8, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
@@ -107,24 +135,30 @@ const CarownerModal = ({ isOpen, closeModal, carowner, onDeleteSuccess }) => {
               <span>{carowner.email || "N/A"}</span>
             </div>
             <div className="flex justify-between">
-              <span className="font-semibold">Contact:</span>
-              <span>{carowner.contact || "N/A"}</span>
-            </div>
+                <span className="font-semibold">Contact:</span>
+                <span>
+                {carowner.dial_code && carowner.phone_number
+                  ? `+${carowner.dial_code} ${carowner.phone_number}`
+                  : "N/A"}
+                </span>            
+          </div>
             <div className="flex justify-between">
               <span className="font-semibold">Total Cars:</span>
               <span>{carowner.cars_count || 0}</span>
             </div>
             <div className="flex justify-between">
+              <span className="font-semibold">Total Balance:</span>
+              <span>{carowner.balance || 0}</span>
+            </div>
+            <div className="flex justify-between">
               <span className="font-semibold">Cars:</span>
-              <div className="flex flex-col items-end"> {/* Align items to the right */}
-              {carowner.cars.length > 0 ? (
-
+              <div className="flex flex-col items-end">
+                {carowner.cars.length > 0 ? (
                   carowner.cars.map((car) => (
                     <span key={car.id} className="text-gray-600">
-                    {car}
-                  </span>
+                      {car}
+                    </span>
                   ))
-
                 ) : (
                   <span className="text-gray-600">No cars found</span>
                 )}
@@ -134,7 +168,7 @@ const CarownerModal = ({ isOpen, closeModal, carowner, onDeleteSuccess }) => {
 
           {/* Action Buttons */}
           <div className="flex justify-center space-x-4 mt-8">
-            {authToken ? (
+            {authToken && user_id && user_id === carowner?.user ? (
               <button
                 onClick={() => setShowConfirm(true)}
                 disabled={loading}
@@ -148,7 +182,7 @@ const CarownerModal = ({ isOpen, closeModal, carowner, onDeleteSuccess }) => {
               </button>
             ) : (
               <p className="text-sm text-gray-500 italic">
-                Login to manage this car owner
+                You can not delete this car owner
               </p>
             )}
           </div>
@@ -208,4 +242,4 @@ const CarownerModal = ({ isOpen, closeModal, carowner, onDeleteSuccess }) => {
   );
 };
 
-export default CarownerModal;
+export default CarownerModal; 

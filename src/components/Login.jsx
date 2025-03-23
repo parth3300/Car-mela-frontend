@@ -36,7 +36,28 @@ const Login = () => {
         setError("Login failed. No token returned.");
       }
     } catch (error) {
-      setError(error.response?.data?.detail || "Login failed. Please check your credentials.");
+      // Extract error messages from Django API response
+      if (error.response && error.response.data) {
+        const { data } = error.response;
+
+        // Handle general errors (e.g., `detail`)
+        if (data.detail) {
+          setError(data.detail);
+        }
+        // Handle non-field errors (e.g., `non_field_errors`)
+        else if (data.non_field_errors) {
+          setError(data.non_field_errors.join(" "));
+        }
+        // Handle field-specific errors (e.g., `username`, `password`)
+        else {
+          const fieldErrors = Object.entries(data)
+            .map(([field, errors]) => `${field}: ${errors.join(" ")}`)
+            .join(" ");
+          setError(fieldErrors);
+        }
+      } else {
+        setError("Please check your internet connection!.");
+      }
       console.error("Login error:", error);
     }
 

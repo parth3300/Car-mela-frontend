@@ -1,239 +1,248 @@
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
+import { motion } from "framer-motion";
 import axios from "axios";
-import { motion, AnimatePresence } from "framer-motion";
 import { BACKEND_URL } from "../../Constants/constant";
-import Notification from "../../components/Globle/Notification";
+import { countries } from "countries-list"; // Import the countries dataset
 
-const CompanyModal = ({ isOpen, closeModal, company, onDeleteSuccess }) => {
+const CreateCompanyModal = ({ onClose, onCreated, initialTitle = "" }) => {
+  const [title, setTitle] = useState(initialTitle); // Pre-fill with initialTitle
+  const [logo, setLogo] = useState(null); // For file upload
+  const [country, setCountry] = useState("");
+  const [since, setSince] = useState("");
   const [loading, setLoading] = useState(false);
-  const [showConfirm, setShowConfirm] = useState(false);
-  const [notification, setNotification] = useState({
-    message: "",
-    type: "",
-  });
-
+  const [error, setError] = useState(null); // State to store backend errors
+  const [searchQuery, setSearchQuery] = useState(""); // For country search
+  const [filteredCountries, setFilteredCountries] = useState([]); // Filtered countries
+  const [showDropdown, setShowDropdown] = useState(false); // Show/hide dropdown
   const authToken = localStorage.getItem("authToken");
 
-  if (!isOpen || !company) return null;
+  // Ref for the modal container
+  const modalRef = useRef(null);
 
-  const handleDelete = async () => {
-    console.log("handleDelete called!");
+  // Convert countries object to an array
+  const allCountries = Object.values(countries).map((country) => ({
+    name: country.name,
+    code: country.code,
+  }));
 
-    if (!authToken) {
-      console.log("No auth token found.");
-      setNotification({
-        message: "Please login to manage companies.",
-        type: "info",
-      });
-      return;
+  // Handle clicks outside the modal
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (modalRef.current && !modalRef.current.contains(event.target)) {
+        onClose(); // Close the modal if clicked outside
+      }
+    };
+
+    // Add event listener when the modal is mounted
+    document.addEventListener("mousedown", handleClickOutside);
+
+    // Clean up the event listener when the modal is unmounted
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [onClose]);
+
+  // Pre-fill the title when initialTitle changes
+  useEffect(() => {
+    if (initialTitle) {
+      setTitle(initialTitle);
     }
+  }, [initialTitle]);
 
+  const handleSubmit = async (e) => {
+    e.preventDefault();
     setLoading(true);
-    console.log("Starting DELETE request for company...");
-    try {
-      const url = `${BACKEND_URL}/store/companies/${company.id}/`;
-      console.log("DELETE URL:", url);
+    setError(null); // Clear previous errors
 
-      const response = await axios.delete(url, {
+    try {
+      // Create FormData for file upload
+      const formData = new FormData();
+      formData.append("title", title);
+      formData.append("logo", logo); // Append the file
+      formData.append("country", country);
+      formData.append("since", since);
+
+      const response = await axios.post(`${BACKEND_URL}/store/companies/`, formData, {
         headers: {
           Authorization: `Bearer ${authToken}`,
+          "Content-Type": "multipart/form-data", // Required for file upload
         },
       });
 
-      console.log("DELETE successful:", response.status);
-
-      setNotification({
-        message: "Company successfully deleted!",
-        type: "success",
-      });
-
-      if (onDeleteSuccess) {
-        onDeleteSuccess(company.id);
-      }
-
-      // Close the modal after a short delay to show the success message
-      setTimeout(() => {
-        closeModal();
-      }, 3000); // Increased delay to 3 seconds
+      console.log("Company created:", response.data);
+      onCreated(response.data); // Notify parent to refetch and close modal
     } catch (error) {
-      console.error("DELETE failed:", error.response || error);
-      setNotification({
-        message: "Failed to delete company. Please try again.",
-        type: "error",
-      });
+      console.error("Error creating company:", error);
+
+      // Handle backend errors
+      if (error.response) {
+        // Extract error messages from Django backend
+        const { data } = error.response;
+        if (data && typeof data === "object") {
+          // If the error is an object (e.g., { "title": ["This field is required."] })
+          const errorMessages = Object.values(data).flat().join(" ");
+          setError(errorMessages);
+        } else if (typeof data === "string") {
+          // If the error is a string (e.g., "Invalid data")
+          setError(data);
+        } else {
+          setError("An error occurred. Please try again.");
+        }
+      } else {
+        setError("Network error. Please check your connection.");
+      }
     } finally {
       setLoading(false);
-      setShowConfirm(false);
     }
   };
-  console.log("HI#",![28, 29, 30].includes(company.id))
 
-  console.log("HI##");
-  
+  const handleLogoChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setLogo(file); // Set the selected file
+    }
+  };
+
+  // Handle country search input
+  const handleCountrySearch = (e) => {
+    const query = e.target.value;
+    setSearchQuery(query);
+    setCountry(query); // Update the country state
+
+    if (query) {
+      const filtered = allCountries.filter((country) =>
+        country.name.toLowerCase().includes(query.toLowerCase())
+      );
+      setFilteredCountries(filtered);
+      setShowDropdown(true);
+    } else {
+      setFilteredCountries([]);
+      setShowDropdown(false);
+    }
+  };
+
+  // Handle country selection
+  const handleCountrySelect = (country) => {
+    setCountry(country.name); // Set the selected country
+    setSearchQuery(country.name); // Update the search query
+    setShowDropdown(false); // Hide the dropdown
+  };
+
+  // Handle Enter key press
+  const handleKeyDown = (e) => {
+    if (e.key === "Enter" && filteredCountries.length > 0) {
+      e.preventDefault(); // Prevent form submission
+      const firstCountry = filteredCountries[0];
+      setCountry(firstCountry.name); // Set the first country in the list
+      setSearchQuery(firstCountry.name); // Update the search query
+      setShowDropdown(false); // Hide the dropdown
+    }
+  };
+
   return (
-    <>
-      {/* Modal Overlay */}
-      <AnimatePresence>
-        {isOpen && (
-          <motion.div
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.3 }}
-          >
-            {/* Modal Content */}
-            <motion.div
-              className="bg-white rounded-2xl p-8 w-full max-w-md shadow-lg relative overflow-y-auto"
-              initial={{ scale: 0.8, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.8, opacity: 0 }}
-              transition={{ duration: 0.3 }}
-              style={{ maxHeight: "80vh" }}
-            >
-              {/* Close Button */}
-              <button
-                onClick={closeModal}
-                className="absolute top-4 right-4 text-gray-500 hover:text-gray-700 text-xl"
-              >
-                &times;
-              </button>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+      <motion.div
+        ref={modalRef} // Attach the ref to the modal container
+        initial={{ scale: 0.8, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        exit={{ scale: 0.8, opacity: 0 }}
+        className="bg-white rounded-2xl shadow-xl p-8 w-full max-w-md"
+      >
+        <h2 className="text-2xl font-bold mb-6 text-blue-700">Create New Company</h2>
 
-              {/* Company Name */}
-              <h2 className="text-2xl font-bold text-blue-800 text-center mb-6">
-                {company.title}
-              </h2>
-
-              {/* Company Logo */}
-              <div className="flex justify-center mb-6">
-                <img
-                  src={company.logo}
-                  alt={company.title}
-                  className="rounded-lg object-cover w-32 h-32 border shadow-md"
-                />
-              </div>
-
-              {/* Company Details */}
-              <div className="space-y-4 text-gray-700">
-                <div className="flex justify-between">
-                  <span className="font-semibold">Country:</span>
-                  <span>{company.country || "N/A"}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="font-semibold">Since:</span>
-                  <span>{company.since || "N/A"}</span>
-                </div>
-                <div className="flex flex-col gap-2">
-                  <span className="font-semibold">Listed Cars:</span>
-                  {company.listed_cars && company.listed_cars.length > 0 ? (
-                    <ul className="list-disc list-inside text-sm text-gray-600">
-                      {company.listed_cars.map((car, index) => (
-                        <li key={car.id || index}>
-                          {index + 1}. {car.title}
-                        </li>
-                      ))}
-                    </ul>
-                  ) : (
-                    <span className="text-gray-500 text-sm">No cars listed</span>
-                  )}
-                </div>
-              </div>
-              {/* Action Buttons */}
-              <div className="flex justify-center space-x-4 mt-8">
-                {!authToken ? (
-                  <p className="text-sm text-gray-500 italic">
-                    Login to manage this company
-                  </p>
-                ) : [28, 29, 30].includes(company.id) ? (
-                  <p className="text-sm text-gray-500 italic">
-                    You cannot delete this company
-                  </p>
-                ) : (
-                  <button
-                    onClick={() => {
-                      console.log("Clicked delete, showing confirm dialog");
-                      setShowConfirm(true);
-                    }}
-                    disabled={loading}
-                    className={`px-5 py-2 rounded-lg transition-all ${
-                      loading
-                        ? "bg-red-400 cursor-not-allowed"
-                        : "bg-red-600 hover:bg-red-700"
-                    } text-white`}
-                  >
-                    Delete
-                  </button>
-                )}
-              </div>
-              {/* Confirm Delete Modal */}
-              <AnimatePresence>
-                {showConfirm && (
-                  <motion.div
-                    className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    transition={{ duration: 0.3 }}
-                  >
-                    <motion.div
-                      initial={{ opacity: 0, y: -50 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -50 }}
-                      transition={{ duration: 0.3 }}
-                      className="bg-white rounded-xl shadow-xl p-6 w-full max-w-sm text-center"
-                    >
-                      <h3 className="text-lg font-semibold text-gray-800 mb-4">
-                        Confirm Deletion
-                      </h3>
-                      <p className="text-gray-600 mb-6">
-                        Are you sure you want to delete{" "}
-                        <span className="font-bold text-red-500">
-                          {company.title}
-                        </span>
-                        ?
-                      </p>
-
-                      {/* Confirm Buttons */}
-                      <div className="flex justify-center gap-4">
-                        <button
-                          onClick={handleDelete}
-                          disabled={loading}
-                          className={`px-4 py-2 rounded-lg text-white ${
-                            loading
-                              ? "bg-red-400 cursor-not-allowed"
-                              : "bg-red-600 hover:bg-red-700"
-                          } transition-all`}
-                        >
-                          {loading ? "Processing..." : "Yes, Delete"}
-                        </button>
-                        <button
-                          onClick={() => {
-                            console.log("Cancel deletion");
-                            setShowConfirm(false);
-                          }}
-                          disabled={loading}
-                          className="px-4 py-2 rounded-lg bg-gray-200 text-gray-700 hover:bg-gray-300 transition-all"
-                        >
-                          Cancel
-                        </button>
-                      </div>
-                    </motion.div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </motion.div>
-          </motion.div>
+        {/* Display backend errors */}
+        {error && (
+          <div className="mb-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded-lg">
+            {error}
+          </div>
         )}
-      </AnimatePresence>
 
-      {/* Global Notification */}
-      <Notification
-        message={notification.message}
-        type={notification.type}
-        onClose={() => setNotification({ message: "", type: "" })}
-      />
-    </>
+        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+          {/* Company Title */}
+          <div>
+            <label className="block text-gray-700 mb-2">Company Title</label>
+            <input
+              type="text"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              required
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-400 outline-none"
+            />
+          </div>
+
+          {/* Company Logo (Image Upload) */}
+          <div>
+            <label className="block text-gray-700 mb-2">Company Logo</label>
+            <input
+              type="file"
+              accept="image/*"
+              onChange={handleLogoChange}
+              required
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-400 outline-none"
+            />
+          </div>
+
+          {/* Country */}
+          <div>
+            <label className="block text-gray-700 mb-2">Country</label>
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={handleCountrySearch}
+              onKeyDown={handleKeyDown} // Handle Enter key press
+              required
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-400 outline-none"
+              placeholder="Search for a country"
+            />
+            {showDropdown && (
+              <div className="mt-2 max-h-48 overflow-y-auto border border-gray-300 rounded-lg">
+                {filteredCountries.map((country) => (
+                  <div
+                    key={country.code}
+                    onClick={() => handleCountrySelect(country)}
+                    className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
+                  >
+                    {country.name}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Since */}
+          <div>
+            <label className="block text-gray-700 mb-2">Since (Year)</label>
+            <input
+              type="number"
+              value={since}
+              onChange={(e) => setSince(e.target.value)}
+              required
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-400 outline-none"
+            />
+          </div>
+
+          {/* Buttons */}
+          <div className="flex justify-end gap-4 mt-6">
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition-all"
+            >
+              Cancel
+            </button>
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all"
+            >
+              {loading ? "Creating..." : "Create"}
+            </button>
+          </div>
+        </form>
+      </motion.div>
+    </div>
   );
 };
 
-export default CompanyModal;
+export default CreateCompanyModal;

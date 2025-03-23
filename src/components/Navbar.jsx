@@ -1,10 +1,27 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { Link, NavLink } from "react-router-dom";
 import { motion } from "framer-motion";
 import { useAuth } from "../context/AuthContext";
 
 const Navbar = () => {
   const { user, logout } = useAuth();
+
+  // ✅ State to show/hide the welcome message
+  const [showWelcome, setShowWelcome] = useState(false);
+
+  useEffect(() => {
+    if (user) {
+      setShowWelcome(true);
+
+      // ✅ Set timer for 10 seconds to hide the welcome message
+      const timer = setTimeout(() => {
+        setShowWelcome(false);
+      }, 10000); // 10,000 milliseconds = 10 seconds
+
+      // Cleanup timer if component unmounts or user changes
+      return () => clearTimeout(timer);
+    }
+  }, [user]);
 
   return (
     <nav className="bg-white border-b border-gray-200 dark:bg-gray-900 shadow-md">
@@ -32,7 +49,17 @@ const Navbar = () => {
         <div className="flex items-center space-x-4">
           {user ? (
             <>
-              <span className="text-green-600 font-semibold">Welcome, {user}!</span>
+              {showWelcome && (
+                <motion.span
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.5 }}
+                  className="text-green-600 font-semibold"
+                >
+                  Welcome, {user}!
+                </motion.span>
+              )}
 
               <motion.button
                 whileHover={{ scale: 1.1 }}

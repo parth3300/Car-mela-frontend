@@ -13,6 +13,46 @@
 	animation: carEntrance 0.8s ease-out;
   }
   
+  /* Navbar Styles */
+  .navbar {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	padding: 1rem;
+	background-color: #1d4ed8; /* Blue background */
+	color: white;
+	position: sticky;
+	top: 0;
+	z-index: 1000;
+	box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  }
+  
+  /* Logo and Hamburger Icon */
+  .navbar-logo {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+	font-size: 1.5rem;
+	font-weight: bold;
+  }
+  
+  .hamburger {
+	display: none; /* Hidden by default */
+	cursor: pointer;
+	font-size: 1.5rem;
+	transition: transform 0.3s ease;
+  }
+  
+  .hamburger:hover {
+	transform: rotate(90deg); /* Rotate hamburger icon on hover */
+  }
+  
+  /* Navigation Links */
+  .nav-links {
+	display: flex;
+	gap: 1rem;
+  }
+  
   .nav-link {
 	display: block;
 	padding: 10px 16px;
@@ -20,11 +60,71 @@
 	color: white;
 	background-color: #1d4ed8;
 	border-radius: 8px;
-	transition: background 0.3s;
+	transition: all 0.3s ease;
+	position: relative;
+	overflow: hidden;
+  }
+  
+  .nav-link::after {
+	content: "";
+	position: absolute;
+	bottom: 0;
+	left: 0;
+	width: 100%;
+	height: 2px;
+	background-color: #16a34a; /* Green underline */
+	transform: scaleX(0);
+	transform-origin: right;
+	transition: transform 0.3s ease;
+  }
+  
+  .nav-link:hover::after {
+	transform: scaleX(1);
+	transform-origin: left;
   }
   
   .nav-link:hover {
-	background-color: #16a34a;
+	background-color: rgba(255, 255, 255, 0.1); /* Light background on hover */
 	color: white;
   }
   
+  /* Mobile Styles */
+  @media (max-width: 768px) {
+	.hamburger {
+	  display: block; /* Show hamburger icon on mobile */
+	}
+  
+	.nav-links {
+	  display: none; /* Hide links by default on mobile */
+	  flex-direction: column;
+	  position: absolute;
+	  top: 60px; /* Adjust based on navbar height */
+	  right: 1rem;
+	  background-color: #1d4ed8; /* Blue background */
+	  border-radius: 8px;
+	  padding: 1rem;
+	  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+	  animation: slideDown 0.5s ease-out;
+	}
+  
+	.nav-links.active {
+	  display: flex; /* Show links when active */
+	}
+  
+	.nav-link {
+	  width: 100%; /* Full width for mobile links */
+	  margin: 0.5rem 0;
+	}
+  }
+  
+  /* Keyframes for Mobile Menu Animation */
+  @keyframes slideDown {
+	0% {
+	  opacity: 0;
+	  transform: translateY(-20px);
+	}
+	100% {
+	  opacity: 1;
+	  transform: translateY(0);
+	}
+  }

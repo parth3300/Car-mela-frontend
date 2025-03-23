@@ -1,17 +1,33 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import axios from "axios";
 import { jwtDecode } from "jwt-decode";
 import { motion, AnimatePresence } from "framer-motion";
 import { BACKEND_URL } from "../../Constants/constant";
 import { XMarkIcon, CheckCircleIcon } from "@heroicons/react/24/solid";
 
-const UpdateCarownerModal = ({ isOpen, closeModal, carowner, onUpdateSuccess, setNotification }) => {
-  const [formData, setFormData] = useState({ contact: "" });
+// Predefined list of dial codes
+const DIAL_CODES = [
+  { code: "+1", country: "USA" },
+  { code: "+91", country: "India" },
+  { code: "+44", country: "UK" },
+  { code: "+61", country: "Australia" },
+  { code: "+81", country: "Japan" },
+  { code: "+86", country: "China" },
+  { code: "+33", country: "France" },
+  { code: "+49", country: "Germany" },
+  { code: "+7", country: "Russia" },
+  { code: "+52", country: "Mexico" },
+];
+
+const UpdateCarOwnerModal = ({ isOpen, closeModal, carowner, onUpdateSuccess, setNotification }) => {
+  const [formData, setFormData] = useState({ dial_code: "+1", phone_number: "", balance: "" });
   const [profilePic, setProfilePic] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [userId, setUserId] = useState("");
+
+  const modalRef = useRef(null);
 
   // ✅ Get user id from token on mount
   useEffect(() => {
@@ -40,7 +56,9 @@ const UpdateCarownerModal = ({ isOpen, closeModal, carowner, onUpdateSuccess, se
   useEffect(() => {
     if (carowner) {
       setFormData({
-        contact: carowner.contact || "",
+        dial_code: carowner.dial_code || "+1",
+        phone_number: carowner.phone_number || "",
+        balance: 0,
       });
     }
   }, [carowner]);
@@ -48,7 +66,18 @@ const UpdateCarownerModal = ({ isOpen, closeModal, carowner, onUpdateSuccess, se
   // ✅ Form input handlers
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+
+    if (name === "phone_number") {
+      // Allow only numeric input and limit to 10 digits
+      const numericValue = value.replace(/\D/g, "").slice(0, 10);
+      setFormData((prev) => ({ ...prev, [name]: numericValue }));
+    } else if (name === "balance") {
+      // Allow only numeric input and limit to 8 digits
+      const numericValue = value.replace(/\D/g, "").slice(0, 8);
+      setFormData((prev) => ({ ...prev, [name]: numericValue }));
+    } else {
+      setFormData((prev) => ({ ...prev, [name]: value }));
+    }
   };
 
   const handleFileChange = (e) => {
@@ -64,6 +93,18 @@ const UpdateCarownerModal = ({ isOpen, closeModal, carowner, onUpdateSuccess, se
       return;
     }
 
+    // Validate phone number field to ensure it has exactly 10 digits
+    if (String(formData.phone_number).length !== 10) {
+      setError("❌ Phone number must be exactly 10 digits.");
+      return;
+    }
+
+    // Validate balance field to ensure it has at most 8 digits
+    if (String(formData.balance).length > 8) {
+      setError("❌ Balance must be at most 8 digits.");
+      return;
+    }
+
     setLoading(true);
     setError("");
 
@@ -72,14 +113,13 @@ const UpdateCarownerModal = ({ isOpen, closeModal, carowner, onUpdateSuccess, se
     try {
       const data = new FormData();
       data.append("user", userId);
-      data.append("contact", formData.contact);
+      data.append("dial_code", formData.dial_code);
+      data.append("phone_number", formData.phone_number);
+      data.append("balance", Number(carowner.balance) + Number(formData.balance));
 
       // If no new profile picture is provided, pass the existing image URL
-      if (profilePic  instanceof File) {
-
+      if (profilePic instanceof File) {
         data.append("profile_pic", profilePic);
-      } else if (carowner.profile_pic instanceof File || formData.profilePic instanceof File) {
-        data.append("profile_pic", carowner.profile_pic);
       }
 
       const response = await axios.put(`${BACKEND_URL}/store/carowners/${carowner.id}/`, data, {
@@ -90,7 +130,7 @@ const UpdateCarownerModal = ({ isOpen, closeModal, carowner, onUpdateSuccess, se
       });
 
       // Reset form data
-      setFormData({ contact: "" });
+      setFormData({ dial_code: "+1", phone_number: "", balance: "" });
       setProfilePic(null);
 
       // ✅ Show success modal
@@ -139,6 +179,23 @@ const UpdateCarownerModal = ({ isOpen, closeModal, carowner, onUpdateSuccess, se
     closeModal();
   };
 
+  // Handle clicking outside the modal
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (modalRef.current && !modalRef.current.contains(event.target)) {
+        closeModal();
+      }
+    };
+
+    if (isOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [isOpen, closeModal]);
+
   return (
     <>
       {/* MAIN FORM MODAL */}
@@ -151,17 +208,15 @@ const UpdateCarownerModal = ({ isOpen, closeModal, carowner, onUpdateSuccess, se
             exit={{ opacity: 0 }}
           >
             <motion.div
+              ref={modalRef}
               className="bg-white rounded-2xl shadow-xl p-8 w-full max-w-md relative"
               initial={{ scale: 0.8, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.8, opacity: 0 }}
             >
-              {/* ❌ Close Button */}
+              {/* Close Button */}
               <button
-                onClick={() => {
-                  setError("");
-                  closeModal();
-                }}
+                onClick={closeModal}
                 className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition"
               >
                 <XMarkIcon className="h-6 w-6" />
@@ -172,19 +227,54 @@ const UpdateCarownerModal = ({ isOpen, closeModal, carowner, onUpdateSuccess, se
               </h2>
 
               <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+                {/* Combined Dial Code and Phone Number Field */}
                 <div>
-                  <label className="block text-gray-700 mb-2">Contact</label>
+                  <label className="block text-gray-700 mb-2">Phone Number</label>
+                  <div className="flex gap-2">
+                    {/* Dial Code Dropdown */}
+                    <select
+                      name="dial_code"
+                      value={formData.dial_code}
+                      onChange={handleChange}
+                      className="w-1/4 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-400 outline-none"
+                    >
+                      {DIAL_CODES.map((dial) => (
+                        <option key={dial.code} value={dial.code}>
+                          {`${dial.code} (${dial.country})`}
+                        </option>
+                      ))}
+                    </select>
+
+                    {/* Phone Number Input */}
+                    <input
+                      type="text"
+                      name="phone_number"
+                      value={formData.phone_number}
+                      onChange={handleChange}
+                      className="w-3/4 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-400 outline-none"
+                      placeholder="Enter phone number"
+                      required
+                      maxLength={10} // Limit input to 10 digits
+                    />
+                  </div>
+                </div>
+
+                {/* Balance Field */}
+                <div>
+                  <label className="block text-gray-700 mb-2">Add Balance</label>
                   <input
-                    type="text"
-                    name="contact"
-                    value={formData.contact}
+                    type="number"
+                    name="balance"
+                    value={formData.balance}
                     onChange={handleChange}
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-400 outline-none"
-                    placeholder="Enter your contact"
+                    placeholder="Enter your balance"
                     required
+                    maxLength={8} // Optional: Adds client-side validation for max length
                   />
                 </div>
 
+                {/* Profile Picture Field */}
                 <div>
                   <label className="block text-gray-700 mb-2">Profile Picture</label>
                   <input
@@ -200,27 +290,17 @@ const UpdateCarownerModal = ({ isOpen, closeModal, carowner, onUpdateSuccess, se
                 )}
 
                 <div className="flex justify-end gap-4 mt-6">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setError("");
-                      closeModal();
-                    }}
-                    className="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition-all"
-                  >
-                    Cancel
-                  </button>
-
+                  {/* Submit Button */}
                   <button
                     type="submit"
                     disabled={loading}
-                    className={`px-6 py-2 text-white rounded-lg transition-all ${
+                    className={`w-full p-2 rounded-md text-white transition ${
                       loading
-                        ? "bg-blue-400 cursor-not-allowed"
+                        ? "bg-gray-400 cursor-not-allowed"
                         : "bg-blue-600 hover:bg-blue-700"
                     }`}
                   >
-                    {loading ? "Updating..." : "Update Car Owner"}
+                    {loading ? "Updating..." : "Update Carowner"}
                   </button>
                 </div>
               </form>
@@ -268,4 +348,4 @@ const UpdateCarownerModal = ({ isOpen, closeModal, carowner, onUpdateSuccess, se
   );
 };
 
-export default UpdateCarownerModal;
+export default UpdateCarOwnerModal;

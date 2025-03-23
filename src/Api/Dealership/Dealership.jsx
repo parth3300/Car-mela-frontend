@@ -7,6 +7,7 @@ import { BuildingStorefrontIcon, MapPinIcon } from "@heroicons/react/24/solid";
 import CreateDealershipModal from "./CreateDealershipModal";
 import DealershipModal from "./DealershipModal";
 import Notification from "../../components/Globle/Notification";
+import SkeletonLoader from "../../components/SkeletonLoader";
 
 const Dealership = () => {
   const [dealerships, setDealerships] = useState([]);
@@ -115,57 +116,62 @@ const Dealership = () => {
         )}
       </motion.div>
 
-      {/* Loading Spinner */}
-      {loading && (
-        <div className="flex justify-center items-center h-64">
-          <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-blue-600"></div>
-        </div>
-      )}
+      {/* Skeleton Loading */}
+      {loading && <SkeletonLoader />}
 
       {/* Dealerships Grid */}
-      <div className="w-full max-w-7xl grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-10 justify-center">
-        {filteredDealerships.map((dealership, index) => (
-          <motion.div
-            key={dealership.id}
-            whileHover={{ scale: 1.05 }}
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: index * 0.05, duration: 0.3 }}
-          >
-            <div
-              onClick={() => setSelectedDealership(dealership)}
-              className="relative bg-white rounded-2xl overflow-hidden shadow-xl cursor-pointer group transform transition-all duration-300 border border-gray-100"
+      {!loading && (
+        <div className="w-full max-w-7xl grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 justify-center">
+          {filteredDealerships.map((dealership, index) => (
+            <motion.div
+              key={dealership.id}
+              whileHover={{ scale: 1.05 }}
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: index * 0.05, duration: 0.3 }}
+              className="h-full" // Ensure all cards have the same height
             >
-              {/* Dealership Icon */}
-              <div className="relative w-full h-[300px] flex justify-center items-center bg-blue-50">
-                <div className="bg-blue-100 p-4 rounded-full">
-                  <BuildingStorefrontIcon className="h-10 w-10 text-blue-600" />
-                </div>
-
-                {/* Overlay on hover */}
-                <div className="absolute inset-0 bg-black bg-opacity-50 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-center items-center text-white px-4">
-                  <div className="text-2xl font-bold mb-2">
-                    {dealership.dealership_name}
+              <div
+                onClick={() => setSelectedDealership(dealership)}
+                className="relative bg-white rounded-2xl overflow-hidden shadow-xl cursor-pointer group transform transition-all duration-300 border border-gray-100 h-full flex flex-col"
+              >
+                {/* Dealership Icon */}
+                <div className="relative w-full h-48 flex justify-center items-center bg-blue-50">
+                  <div className="bg-blue-100 p-4 rounded-full">
+                    <BuildingStorefrontIcon className="h-10 w-10 text-blue-600" />
                   </div>
-                  <p className="text-sm text-blue-300">Tap for details</p>
-                </div>
-              </div>
 
-              {/* Bottom Info */}
-              <div className="p-4 bg-gradient-to-r from-blue-100 to-white">
-                <div className="text-blue-800 font-bold text-lg truncate">
-                  {dealership.dealership_name}
+                  {/* Overlay on hover */}
+                  <div className="absolute inset-0 bg-black bg-opacity-50 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-center items-center text-white px-4">
+                    <div className="text-2xl font-bold mb-2">
+                      {dealership.dealership_name}
+                    </div>
+                    <p className="text-sm text-blue-300">Tap for details</p>
+                  </div>
                 </div>
-                <div className="flex items-center text-gray-600 text-sm mt-2">
-                  <MapPinIcon className="h-5 w-5 mr-2 text-blue-400" />
-                  <span>{dealership.address || "Unknown Location"}</span>
+
+                {/* Bottom Info */}
+                <div className="p-4 bg-gradient-to-r from-blue-100 to-white flex-1 flex flex-col justify-between">
+                  <div>
+                    <div className="text-blue-800 font-bold text-lg truncate">
+                      {dealership.dealership_name}
+                    </div>
+                    <div className="flex items-center text-gray-600 text-sm mt-2">
+                      <MapPinIcon className="h-5 w-5 mr-2 text-blue-400" />
+                      <span className="truncate">
+                        {dealership.address || "Unknown Location"}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="mt-4">
+                    <StarRating rating={parseFloat(dealership.ratings)} />
+                  </div>
                 </div>
-                <StarRating rating={parseFloat(dealership.ratings)} />
               </div>
-            </div>
-          </motion.div>
-        ))}
-      </div>
+            </motion.div>
+          ))}
+        </div>
+      )}
 
       {/* No Dealerships Found */}
       {!loading && filteredDealerships.length === 0 && (

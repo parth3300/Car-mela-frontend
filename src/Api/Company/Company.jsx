@@ -7,6 +7,7 @@ import { motion } from "framer-motion";
 import Notification from "../../components/Globle/Notification";
 import UpdateCompanyModal from "./UpdateCompanyModal.jsx";
 import { PencilSquareIcon } from "@heroicons/react/24/solid"; // For edit icon
+import SkeletonLoader from "../../components/SkeletonLoader.jsx";
 
 const Company = () => {
   const [companies, setCompanies] = useState([]);
@@ -138,66 +139,64 @@ const Company = () => {
         )}
       </motion.div>
 
-      {/* Loading Spinner */}
-      {loading && (
-        <div className="flex justify-center items-center h-64">
-          <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-blue-600"></div>
-        </div>
-      )}
+      {/* Loading Skeleton */}
+      {loading && <SkeletonLoader />}
 
       {/* Companies Grid */}
-      <div className="w-full max-w-7xl grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-10 justify-center">
-        {filteredCompanies.map((company, index) => (
-          <motion.div
-            key={company.id}
-            whileHover={{ scale: 1.05 }}
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: index * 0.05, duration: 0.3 }}
-          >
-            <div
-              onClick={() => openModal(company)}
-              className="relative bg-white rounded-2xl overflow-hidden shadow-xl cursor-pointer group transform transition-all duration-300 border border-gray-100"
+      {!loading && (
+        <div className="w-full max-w-7xl grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-10 justify-center">
+          {filteredCompanies.map((company, index) => (
+            <motion.div
+              key={company.id}
+              whileHover={{ scale: 1.05 }}
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: index * 0.05, duration: 0.3 }}
             >
-              {/* Company Logo */}
-              <div className="relative w-full h-[300px] flex justify-center items-center bg-blue-50">
-                <img
-                  className="w-40 h-40 object-cover rounded-full border-4 border-blue-500 transition-transform duration-300 group-hover:scale-110 shadow-md z-10 bg-white"
-                  src={company.logo}
-                  alt={`Company ${company.title}`}
-                />
+              <div
+                onClick={() => openModal(company)}
+                className="relative bg-white rounded-2xl overflow-hidden shadow-xl cursor-pointer group transform transition-all duration-300 border border-gray-100"
+              >
+                {/* Company Logo */}
+                <div className="relative w-full h-[300px] flex justify-center items-center bg-blue-50">
+                  <img
+                    className="w-40 h-40 object-cover rounded-full border-4 border-blue-500 transition-transform duration-300 group-hover:scale-110 shadow-md z-10 bg-white"
+                    src={company.logo}
+                    alt={`Company ${company.title}`}
+                  />
 
-                {/* Overlay on hover */}
-                <div className="absolute inset-0 bg-black bg-opacity-50 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-center items-center text-white px-4">
-                  <div className="text-2xl font-bold mb-2">{company.title}</div>
-                  <p className="text-sm text-blue-300">Tap for details</p>
+                  {/* Overlay on hover */}
+                  <div className="absolute inset-0 bg-black bg-opacity-50 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-center items-center text-white px-4">
+                    <div className="text-2xl font-bold mb-2">{company.title}</div>
+                    <p className="text-sm text-blue-300">Tap for details</p>
+                  </div>
                 </div>
-              </div>
 
-              {/* Bottom Info */}
-              <div className="p-4 bg-gradient-to-r from-blue-100 to-white">
-                <div className="text-blue-800 font-bold text-lg truncate">
-                  {company.title}
+                {/* Bottom Info */}
+                <div className="p-4 bg-gradient-to-r from-blue-100 to-white">
+                  <div className="text-blue-800 font-bold text-lg truncate">
+                    {company.title}
+                  </div>
                 </div>
-              </div>
 
-              {/* Update Button */}
-              {authToken && ![28, 29, 30].includes(company.id) && (
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation(); // Prevent opening the details modal
-                    setCompanyToUpdate(company); // Set the company to update
-                    setIsUpdateModalOpen(true); // Open the update modal
-                  }}
-                  className="absolute bottom-4 right-4 p-2 bg-blue-600 text-white rounded-full hover:bg-blue-700 transition-all"
-                >
-                  <PencilSquareIcon className="h-5 w-5" />
-                </button>
-              )}
-            </div>
-          </motion.div>
-        ))}
-      </div>
+                {/* Update Button */}
+                {authToken && ![28, 29, 30].includes(company.id) && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation(); // Prevent opening the details modal
+                      setCompanyToUpdate(company); // Set the company to update
+                      setIsUpdateModalOpen(true); // Open the update modal
+                    }}
+                    className="absolute bottom-4 right-4 p-2 bg-blue-600 text-white rounded-full hover:bg-blue-700 transition-all"
+                  >
+                    <PencilSquareIcon className="h-5 w-5" />
+                  </button>
+                )}
+              </div>
+            </motion.div>
+          ))}
+        </div>
+      )}
 
       {/* No Companies Found */}
       {!loading && filteredCompanies.length === 0 && (

@@ -8,6 +8,7 @@ import { useDebounce } from "use-debounce"; // Install using `npm install use-de
 import CreateCarModal from "./CreateCarModal"; // Import the CreateCarModal
 import UpdateCarModal from "./UpdateCarModal"; // Import the UpdateCarModal
 import { XMarkIcon, PencilSquareIcon } from "@heroicons/react/24/solid"; // For clear search button and edit icon
+import SkeletonLoader from "../../components/SkeletonLoader";
 
 const Car = () => {
   const [cars, setCars] = useState([]);
@@ -53,6 +54,8 @@ const Car = () => {
 
   // Handle successful car creation
   const handleCreateCarSuccess = (newCar) => {
+
+    
     setCars((prevCars) => [newCar, ...prevCars]);
     setIsCreateCarModalOpen(false); // Close the modal
     setNotification({
@@ -83,26 +86,6 @@ const Car = () => {
     }, 5000);
   };
 
-  // Skeleton Loading Component
-  const SkeletonLoader = () => (
-    <div className="w-full max-w-7xl grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 justify-center">
-      {[...Array(8)].map((_, index) => (
-        <motion.div
-          key={index}
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: index * 0.1, duration: 0.3 }}
-          className="bg-white rounded-2xl shadow-xl overflow-hidden"
-        >
-          <div className="w-full h-[300px] bg-gray-200 animate-pulse"></div>
-          <div className="p-4">
-            <div className="h-6 bg-gray-200 animate-pulse rounded mb-2"></div>
-            <div className="h-4 bg-gray-200 animate-pulse rounded w-1/2"></div>
-          </div>
-        </motion.div>
-      ))}
-    </div>
-  );
 
   return (
     <div className="bg-gradient-to-b from-blue-50 to-white min-h-screen p-8 flex flex-col items-center">
@@ -209,10 +192,10 @@ const Car = () => {
                   {/* Overlay on Hover */}
                   <div className="absolute inset-0 bg-black bg-opacity-50 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-center items-center text-white px-4">
                     <div className="text-2xl font-bold mb-2">{car.title}</div>
-                    <div className="text-lg mb-2">₹{car.price}</div>
-                    <StarRating rating={parseFloat(car.ratings)} />
+                    <div className="text-lg mb-2">${car.price}</div>
+                    <StarRating rating={parseFloat(car.average_rating)} />
                     <div className="text-sm text-blue-300 mt-2">
-                      {car.carowner ? car.carowner.name : "Unknown Owner"}
+                      {car.carowner ? car.carowner.name : "Not Owned Yet"}
                     </div>
                   </div>
                 </motion.div>
@@ -224,7 +207,7 @@ const Car = () => {
                   {car.title}
                 </div>
                 <div className="text-gray-700 font-semibold mt-1">
-                  ₹{car.price}
+                  ${car.price}
                 </div>
               </div>
 

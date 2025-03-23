@@ -12,6 +12,7 @@ import CarDetails from "./Api/Car/CarDetails ";
 import NotFound from "./components/NotFound";
 import Login from "./components/Login";
 import { AuthProvider, useAuth } from "./context/AuthContext";  // ✅ Import Auth Context
+import Footer from "./components/Footer";
 
 const AuthRedirect = ({ children }) => {
   const { user } = useAuth();
@@ -23,6 +24,7 @@ function App() {
     <AuthProvider>  {/* ✅ Wrap entire app with AuthProvider */}
       <Router>
         <Navbar />
+        <div className="flex flex-col min-h-screen">
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/cars" element={<CarList />} />
@@ -39,6 +41,8 @@ function App() {
           <Route path="*" element={<NotFound />} />
           
         </Routes>
+        <Footer /> {/* Add the Footer component here */}
+      </div>
       </Router>
     </AuthProvider>
   );
