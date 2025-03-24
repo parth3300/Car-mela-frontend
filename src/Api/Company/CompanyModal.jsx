@@ -146,7 +146,7 @@ const CompanyModal = ({
 
           {/* Action Buttons */}
           <div className="flex justify-center space-x-4 mt-8">
-            {authToken ? (
+            {authToken && ![28, 29, 30].includes(company.id) ? (
               <button
                 onClick={() => setShowConfirm(true)}
                 disabled={loading}
@@ -160,7 +160,7 @@ const CompanyModal = ({
               </button>
             ) : (
               <p className="text-sm text-gray-500 italic">
-                Login to manage this company
+                You can not delete this company
               </p>
             )}
           </div>
