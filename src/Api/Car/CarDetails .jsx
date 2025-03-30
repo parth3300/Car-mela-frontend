@@ -501,8 +501,6 @@ const CarDetails = () => {
         (owner) => owner.user === user_id
       );
   
-      console.log(carowner,"hi3");
-      
       if (!carowner) {
         setNotification({
           message: "Please become a Car Owner to purchase a car.",

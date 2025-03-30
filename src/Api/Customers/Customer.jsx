@@ -48,12 +48,16 @@ const Customers = () => {
   }, []);
 
   const filteredCustomers = customers.filter((customer) =>
-    `${customer.first_name} ${customer.last_name}`.toLowerCase().includes(searchQuery.toLowerCase())
+    `${customer.name}`.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   const handleDeleteSuccess = (deletedId) => {
     setCustomers((prev) => prev.filter((customer) => customer.id !== deletedId));
     setSelectedCustomer(null);
+    setNotification({
+      message: "Customer deleted successfully!",
+      type: "success",
+    });
   };
 
   const handleCreateSuccess = (newCustomer) => {
@@ -79,6 +83,16 @@ const Customers = () => {
   };
 
   let user_is_customer = customers.find((customer) => customer.user === user_id);
+
+  // Auto-hide notification after 5 seconds
+  useEffect(() => {
+    if (notification.message) {
+      const timer = setTimeout(() => {
+        setNotification({ message: "", type: "" });
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [notification]);
 
   return (
     <div className="bg-gradient-to-b from-blue-50 to-white min-h-screen p-8 flex flex-col items-center">
@@ -168,13 +182,21 @@ const Customers = () => {
               >
                 {/* Profile Picture */}
                 <div className="bg-blue-100 p-4 rounded-full mb-4">
-                  <UserIcon className="h-10 w-10 text-blue-600" />
+                  {customer.profile_pic ? (
+                    <img 
+                      src={`${BACKEND_URL}${customer.profile_pic}`} 
+                      alt="Profile"
+                      className="h-10 w-10 rounded-full object-cover"
+                    />
+                  ) : (
+                    <UserIcon className="h-10 w-10 text-blue-600" />
+                  )}
                 </div>
 
                 {/* Info */}
                 <div className="text-center">
                   <h2 className="text-xl font-bold text-blue-800 mb-2">
-                    {customer.first_name} {customer.last_name}
+                    {customer.name}
                   </h2>
 
                   <div className="flex items-center justify-center text-gray-600 text-sm mb-3">
@@ -186,7 +208,7 @@ const Customers = () => {
                 {/* User Info on Hover */}
                 <div className="absolute inset-0 bg-black bg-opacity-50 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-center items-center text-white px-4">
                   <p className="text-lg font-semibold">Username:</p>
-                  <p className="text-xl font-bold">{customer.user.username}</p>
+                  <p className="text-xl font-bold">{customer.name}</p>
                 </div>
 
                 {/* Update Button */}
@@ -247,6 +269,7 @@ const Customers = () => {
             customer={selectedCustomer}
             closeModal={() => setSelectedCustomer(null)}
             onDeleteSuccess={handleDeleteSuccess}
+            setNotification={setNotification}
           />
         )}
       </AnimatePresence>

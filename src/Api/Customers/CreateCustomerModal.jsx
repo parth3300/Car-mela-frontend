@@ -3,7 +3,7 @@ import axios from "axios";
 import { jwtDecode } from "jwt-decode";
 import { motion, AnimatePresence } from "framer-motion";
 import { BACKEND_URL } from "../../Constants/constant";
-import { XMarkIcon, CheckCircleIcon, ChevronDownIcon } from "@heroicons/react/24/solid";
+import { XMarkIcon, CheckCircleIcon, ChevronDownIcon, PhotoIcon } from "@heroicons/react/24/solid";
 
 // Reuse the same DIAL_CODES array from CreateCarOwnerModal
 const DIAL_CODES = [
@@ -89,7 +89,9 @@ const CreateCustomerModal = ({ isOpen, closeModal, onCreateSuccess, setNotificat
   const [formData, setFormData] = useState({
     dial_code: DIAL_CODES[1], // Default to India (+91)
     phone_number: "",
+    profile_pic: null
   });
+  const [previewImage, setPreviewImage] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [showSuccessModal, setShowSuccessModal] = useState(false);
@@ -97,6 +99,7 @@ const CreateCustomerModal = ({ isOpen, closeModal, onCreateSuccess, setNotificat
 
   const modalRef = useRef(null);
   const successModalRef = useRef(null);
+  const fileInputRef = useRef(null);
 
   // Get user id from token on mount
   useEffect(() => {
@@ -133,6 +136,32 @@ const CreateCustomerModal = ({ isOpen, closeModal, onCreateSuccess, setNotificat
     }
   };
 
+  const handleFileChange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.match('image.*')) {
+      setError("❌ Please select an image file (JPEG, PNG)");
+      return;
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      setError("❌ Image size should be less than 5MB");
+      return;
+    }
+
+    setFormData((prev) => ({ ...prev, profile_pic: file }));
+
+    // Create preview
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setPreviewImage(reader.result);
+    };
+    reader.readAsDataURL(file);
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -153,22 +182,33 @@ const CreateCustomerModal = ({ isOpen, closeModal, onCreateSuccess, setNotificat
     const authToken = localStorage.getItem("authToken");
 
     try {
+      // Create FormData for file upload
+      const formDataToSend = new FormData();
+      formDataToSend.append("user", userId);
+      formDataToSend.append("dial_code", formData.dial_code.code);
+      formDataToSend.append("phone_number", formData.phone_number);
+      if (formData.profile_pic) {
+        formDataToSend.append("profile_pic", formData.profile_pic);
+      }
+
       const response = await axios.post(
         `${BACKEND_URL}/store/customers/`,
-        {
-          user: userId,
-          dial_code: formData.dial_code.code,
-          phone_number: formData.phone_number,
-        },
+        formDataToSend,
         {
           headers: {
             Authorization: `Bearer ${authToken}`,
+            "Content-Type": "multipart/form-data",
           },
         }
       );
 
       // Reset form data
-      setFormData({ dial_code: DIAL_CODES[1], phone_number: "" });
+      setFormData({ 
+        dial_code: DIAL_CODES[1], 
+        phone_number: "",
+        profile_pic: null
+      });
+      setPreviewImage(null);
 
       // Show success modal
       setShowSuccessModal(true);
@@ -281,6 +321,46 @@ const CreateCustomerModal = ({ isOpen, closeModal, onCreateSuccess, setNotificat
               </div>
 
               <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+                {/* Profile Picture Upload */}
+                <div>
+                  <label className="block text-gray-700 mb-2">Profile Picture (Optional)</label>
+                  <div className="flex items-center gap-4">
+                    <div 
+                      onClick={() => fileInputRef.current.click()}
+                      className="w-20 h-20 rounded-full border-2 border-dashed border-gray-300 flex items-center justify-center cursor-pointer hover:border-blue-400 transition-colors overflow-hidden"
+                    >
+                      {previewImage ? (
+                        <img 
+                          src={previewImage} 
+                          alt="Profile preview" 
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <PhotoIcon className="w-8 h-8 text-gray-400" />
+                      )}
+                    </div>
+                    <div className="flex-1">
+                      <button
+                        type="button"
+                        onClick={() => fileInputRef.current.click()}
+                        className="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm transition-colors"
+                      >
+                        {formData.profile_pic ? "Change Photo" : "Upload Photo"}
+                      </button>
+                      <p className="text-xs text-gray-500 mt-1">
+                        JPEG or PNG (max 5MB)
+                      </p>
+                    </div>
+                    <input
+                      type="file"
+                      ref={fileInputRef}
+                      onChange={handleFileChange}
+                      accept="image/*"
+                      className="hidden"
+                    />
+                  </div>
+                </div>
+
                 {/* Combined Dial Code and Phone Number Field */}
                 <div>
                   <label className="block text-gray-700 mb-2">Phone Number</label>

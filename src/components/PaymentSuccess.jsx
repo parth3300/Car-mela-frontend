@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import axios from "axios";
 import { motion } from "framer-motion";
@@ -8,90 +8,73 @@ import PdfGenerator from "./PdfGenerator";
 import { PDFDownloadLink } from '@react-pdf/renderer';
 
 const PaymentSuccess = () => {
-  const location = useLocation();
-  const navigate = useNavigate();
   const [paymentStatus, setPaymentStatus] = useState({
     loading: true,
     success: false,
     error: null,
     carDetails: null,
+    paymentDetails: null,
+    customerDetails: null
   });
 
-  useEffect(() => {
-    const queryParams = new URLSearchParams(location.search);
-    const sessionId = queryParams.get("session_id");
+  const navigate = useNavigate();
+  const location = useLocation();
+  const hasFetched = useRef(false);
+  const queryParams = new URLSearchParams(location.search);
+  const sessionId = queryParams.get("session_id");
 
-    if (!sessionId) {
+  const verifyPayment = async () => {
+    try {
+      if (!sessionId || hasFetched.current) return;
+      hasFetched.current = true;
+
+      const authToken = localStorage.getItem("authToken");
+      if (!authToken) throw new Error("User not authenticated");
+
+      const response = await axios.get(`${BACKEND_URL}/store/verify-payment/${sessionId}/`, {
+        headers: { Authorization: `Bearer ${authToken}` },
+      });
+
       setPaymentStatus({
         loading: false,
-        success: false,
-        error: "No session ID found in URL",
-        carDetails: null,
-      });
-      return;
-    }
-
-
-    const verifyPayment = async () => {
-      try {
-        const authToken = localStorage.getItem("authToken");
-        if (!authToken) {
-          throw new Error("User not authenticated");
-        }
-
-        const response = await axios.get(
-          `${BACKEND_URL}/store/verify-payment/${sessionId}/`,
-          {
-            headers: {
-              Authorization: `Bearer ${authToken}`,
-            },
-          }
-        );
-
-        // Get customer details from local storage or API
-        const customerDetails = {
+        success: true,
+        error: null,
+        carDetails: response.data.car,
+        paymentDetails: {
+          transactionId: response.data.session.payment_intent,
+          amount: response.data.session.amount_total / 100,
+          date: new Date().toISOString(),
+        },
+        customerDetails: {
           id: response.data.user_id,
           name: response.data.user_name,
           email: response.data.user_email,
-          dial_code: "+1", // Update this with actual data from your system
-          phone_number: "555-123-4567", // Update this with actual data
-        };
+          dial_code: "+1",
+          phone_number: "555-123-4567",
+        },
+      });
 
-        setPaymentStatus({
-          loading: false,
-          success: true,
-          error: null,
-          carDetails: response.data.car,
-          paymentDetails: {
-            transactionId: response.data.session.payment_intent,
-            amount: response.data.session.amount_total / 100,
-            date: new Date().toISOString(),
-          },
-          customerDetails,
-        });
+      // Navigate after 8 seconds
+      setTimeout(() => {
+        navigate("/");
+      }, 8000);
+    } catch (error) {
+      console.error("Payment verification failed:", error);
+      setPaymentStatus({
+        loading: false,
+        success: false,
+        error: error.response?.data?.message || "Payment verification failed",
+        carDetails: null,
+        paymentDetails: null,
+        customerDetails: null,
+      });
+    }
+  };
 
-        // Redirect to home after 8 seconds if user doesn't interact
-        const timer = setTimeout(() => {
-          navigate("/");
-        }, 8000);
-
-        return () => clearTimeout(timer);
-      } catch (error) {
-        console.error("Payment verification failed:", error);
-        setPaymentStatus({
-          loading: false,
-          success: false,
-          error: error.response?.data?.message || "Payment verification failed",
-          carDetails: null,
-          paymentDetails: null,
-          customerDetails: null,
-        });
-      }
-    };
-
+  useEffect(() => {
     verifyPayment();
-  }, [location.search, navigate]);
-  
+  }, [sessionId]);
+
   if (paymentStatus.loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
@@ -273,7 +256,6 @@ const PaymentSuccess = () => {
                 </button>
               </div>
               
-              {/* Add PDF download button */}
               <div className="mt-6">
                 {paymentStatus.carDetails && paymentStatus.customerDetails && paymentStatus.paymentDetails && (
                   <PDFDownloadLink
@@ -296,7 +278,6 @@ const PaymentSuccess = () => {
                   </PDFDownloadLink>
                 )}
               </div>
-
             </div>
           </div>
         ) : (

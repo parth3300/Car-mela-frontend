@@ -213,7 +213,12 @@ const Support = () => {
                     onClick={() => toggleFaq(faq.id)}
                     className="w-full flex justify-between items-center p-6 text-left focus:outline-none"
                   >
-                    <h3 className="text-lg font-medium text-gray-900">{faq.question}</h3>
+                    <div>
+                      <h3 className="text-lg font-medium text-gray-900">{faq.question}</h3>
+                      <p className="text-sm text-gray-500 mt-1">
+                        {new Date(faq.created_at).toLocaleDateString()}
+                      </p>
+                    </div>
                     <svg
                       className={`h-5 w-5 text-gray-500 transform transition-transform ${expandedFaq === faq.id ? 'rotate-180' : ''}`}
                       viewBox="0 0 20 20"
