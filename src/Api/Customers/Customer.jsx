@@ -78,7 +78,7 @@ const Customers = () => {
     });
   };
 
-  let user_is_customer = customers.find((customer) => customer.user == user_id);
+  let user_is_customer = customers.find((customer) => customer.user === user_id);
 
   return (
     <div className="bg-gradient-to-b from-blue-50 to-white min-h-screen p-8 flex flex-col items-center">

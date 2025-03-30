@@ -83,7 +83,7 @@ const Carowners = () => {
   let user_is_carowner = "";
   user_is_carowner = carowners.find(
     (owner) => {
-      return owner.user == user_id}
+      return owner.user === user_id}
   );
   return (
     <div className="bg-gradient-to-b from-blue-50 to-white min-h-screen p-8 flex flex-col items-center">

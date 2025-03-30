@@ -7,7 +7,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useDebounce } from "use-debounce";
 import CreateCarModal from "./CreateCarModal";
 import UpdateCarModal from "./UpdateCarModal";
-import { XMarkIcon, PencilSquareIcon, TrashIcon } from "@heroicons/react/24/solid";
+import { XMarkIcon, PencilSquareIcon } from "@heroicons/react/24/solid";
 import SkeletonLoader from "../../components/SkeletonLoader";
 
 const Car = () => {
@@ -19,12 +19,11 @@ const Car = () => {
   const [isUpdateCarModalOpen, setIsUpdateCarModalOpen] = useState(false);
   const [selectedCar, setSelectedCar] = useState(null);
   const [notification, setNotification] = useState({ message: "", type: "" });
-  const [selectedCars, setSelectedCars] = useState([]); // Track selected cars for deletion
-  const [isDeleteMode, setIsDeleteMode] = useState(false); // Toggle delete mode
+  const [selectedCars, setSelectedCars] = useState([]);
+  const [isDeleteMode, setIsDeleteMode] = useState(false);
 
   const authToken = localStorage.getItem("authToken");
 
-  // Fetch cars data
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
@@ -45,7 +44,6 @@ const Car = () => {
     fetchData();
   }, []);
 
-  // Filter cars based on search query
   const filteredCars = cars.filter((car) => {
     const query = debouncedQuery.toLowerCase();
     return (
@@ -54,7 +52,6 @@ const Car = () => {
     );
   });
 
-  // Toggle car selection for deletion
   const toggleCarSelection = (carId) => {
     setSelectedCars(prev =>
       prev.includes(carId)
@@ -63,7 +60,6 @@ const Car = () => {
     );
   };
 
-  // Delete selected cars
   const deleteSelectedCars = async () => {
     if (selectedCars.length === 0) return;
 
@@ -71,7 +67,6 @@ const Car = () => {
       setLoading(true);
       const authToken = localStorage.getItem("authToken");
       
-      // Delete each selected car
       await Promise.all(
         selectedCars.map(carId =>
           axios.delete(`${BACKEND_URL}/store/cars/${carId}/`, {
@@ -82,7 +77,6 @@ const Car = () => {
         )
       );
 
-      // Update the cars list
       setCars(prev => prev.filter(car => !selectedCars.includes(car.id)));
       setSelectedCars([]);
       setIsDeleteMode(false);
@@ -99,15 +93,12 @@ const Car = () => {
       });
     } finally {
       setLoading(false);
-      
-      // Clear notification after 5 seconds
       setTimeout(() => {
         setNotification({ message: "", type: "" });
       }, 5000);
     }
   };
 
-  // Handle successful car creation
   const handleCreateCarSuccess = (newCar) => {
     setCars((prevCars) => [newCar, ...prevCars]);
     setIsCreateCarModalOpen(false);
@@ -118,7 +109,6 @@ const Car = () => {
     setTimeout(() => setNotification({ message: "", type: "" }), 5000);
   };
 
-  // Handle successful car update
   const handleUpdateCarSuccess = (updatedCar) => {
     setCars((prevCars) =>
       prevCars.map((car) => (car.id === updatedCar.id ? updatedCar : car))
@@ -133,7 +123,6 @@ const Car = () => {
 
   return (
     <div className="bg-gradient-to-b from-blue-50 to-white min-h-screen p-8 flex flex-col items-center">
-      {/* Notification */}
       <AnimatePresence>
         {notification.message && (
           <motion.div
@@ -152,7 +141,6 @@ const Car = () => {
         )}
       </AnimatePresence>
 
-      {/* Title */}
       <motion.h1
         className="text-5xl font-extrabold mb-10 text-center text-blue-800"
         initial={{ opacity: 0, y: -20 }}
@@ -162,14 +150,12 @@ const Car = () => {
         🚗 Explore Our Cars
       </motion.h1>
 
-      {/* Search and Action Buttons */}
       <motion.div
         className="w-full max-w-6xl flex flex-col md:flex-row justify-between items-center mb-12 gap-4"
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.3, duration: 0.5 }}
       >
-        {/* Search Input */}
         <div className="relative w-full md:w-1/3">
           <input
             type="text"
@@ -188,7 +174,6 @@ const Car = () => {
           )}
         </div>
 
-        {/* Action Buttons */}
         <div className="flex gap-3">
           {isDeleteMode ? (
             <>
@@ -236,10 +221,8 @@ const Car = () => {
         </div>
       </motion.div>
 
-      {/* Loading Spinner */}
       {loading && <SkeletonLoader />}
 
-      {/* Car Grid */}
       <div className="w-full max-w-7xl grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 justify-center">
         {filteredCars.map((car, index) => (
           <motion.div
@@ -249,126 +232,119 @@ const Car = () => {
             transition={{ delay: index * 0.05, duration: 0.3 }}
             className="w-full"
           >
-            <div className={`relative bg-white rounded-2xl overflow-hidden shadow-xl cursor-pointer group transform transition-all duration-300 border ${
+            <div className={`relative bg-white rounded-2xl overflow-hidden shadow-xl group transform transition-all duration-300 border ${
               selectedCars.includes(car.id) 
                 ? "border-red-500 ring-2 ring-red-500" 
                 : "border-gray-100 hover:border-blue-200"
-            } hover:shadow-2xl`}>
+            } hover:shadow-2xl flex flex-col h-full`}>
 
+              {isDeleteMode ? (
+                <div 
+                  className={`relative cursor-pointer ${selectedCars.includes(car.id) ? 'ring-2 ring-green-500' : ''} ${
+                    [8, 9, 10].includes(car.id) ? 'cursor-not-allowed opacity-70' : ''
+                  }`}
+                  onClick={() => ![8, 9, 10].includes(car.id) && toggleCarSelection(car.id)}
+                >
+                  <div className="absolute top-2 left-2 z-10">
+                    <div className={`flex items-center justify-center w-8 h-8 rounded-full transition-all duration-200 ${
+                      selectedCars.includes(car.id) 
+                        ? "bg-green-500" 
+                        : [8, 9, 10].includes(car.id) 
+                          ? "bg-gray-300 border-2 border-gray-400" 
+                          : "bg-white/80 border-2 border-gray-300"
+                    }`}>
+                      {selectedCars.includes(car.id) && (
+                        <svg 
+                          className="w-5 h-5 text-white"
+                          fill="none" 
+                          stroke="currentColor" 
+                          viewBox="0 0 24 24"
+                        >
+                          <path 
+                            strokeLinecap="round" 
+                            strokeLinejoin="round" 
+                            strokeWidth={3} 
+                            d="M5 13l4 4L19 7" 
+                          />
+                        </svg>
+                      )}
+                      {[8, 9, 10].includes(car.id) && (
+                        <svg 
+                          className="w-4 h-4 text-gray-600"
+                          fill="none" 
+                          stroke="currentColor" 
+                          viewBox="0 0 24 24"
+                        >
+                          <path 
+                            strokeLinecap="round" 
+                            strokeLinejoin="round" 
+                            strokeWidth={3} 
+                            d="M6 18L18 6M6 6l12 12" 
+                          />
+                        </svg>
+                      )}
+                    </div>
+                  </div>
 
-{isDeleteMode ? (
-  <div 
-    className={`relative cursor-pointer ${selectedCars.includes(car.id) ? 'ring-2 ring-green-500' : ''} ${
-      [8, 9, 10].includes(car.id) ? 'cursor-not-allowed opacity-70' : ''
-    }`}
-    onClick={() => ![8, 9, 10].includes(car.id) && toggleCarSelection(car.id)}
-  >
-    {/* Checkbox in top-left corner */}
-    <div className="absolute top-2 left-2 z-10">
-      <div className={`flex items-center justify-center w-8 h-8 rounded-full transition-all duration-200 ${
-        selectedCars.includes(car.id) 
-          ? "bg-green-500" 
-          : [8, 9, 10].includes(car.id) 
-            ? "bg-gray-300 border-2 border-gray-400" 
-            : "bg-white/80 border-2 border-gray-300"
-      }`}>
-        {selectedCars.includes(car.id) && (
-          <svg 
-            className="w-5 h-5 text-white"
-            fill="none" 
-            stroke="currentColor" 
-            viewBox="0 0 24 24"
-          >
-            <path 
-              strokeLinecap="round" 
-              strokeLinejoin="round" 
-              strokeWidth={3} 
-              d="M5 13l4 4L19 7" 
-            />
-          </svg>
-        )}
-        {[8, 9, 10].includes(car.id) && (
-          <svg 
-            className="w-4 h-4 text-gray-600"
-            fill="none" 
-            stroke="currentColor" 
-            viewBox="0 0 24 24"
-          >
-            <path 
-              strokeLinecap="round" 
-              strokeLinejoin="round" 
-              strokeWidth={3} 
-              d="M6 18L18 6M6 6l12 12" 
-            />
-          </svg>
-        )}
-      </div>
-    </div>
-
-    {/* Car Image and Content */}
-    <motion.div
-      className="relative w-full h-[300px] flex justify-center items-center bg-blue-50"
-      whileHover={{ scale: ![8, 9, 10].includes(car.id) ? 1.02 : 1 }}
-    >
-      <img
-        className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-        src={car.image || "https://via.placeholder.com/300?text=No+Image"}
-        alt={car.title}
-      />
-      <div className="absolute inset-0 bg-black bg-opacity-50 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-center items-center text-white px-4">
-        <div className="text-2xl font-bold mb-2">{car.title}</div>
-        <div className="text-sm text-blue-300 mt-2">
-          {car.carowner ? `Owned by ${car.carowner.name}` : "Not Owned Yet"}
-        </div>
-        {[8, 9, 10].includes(car.id) && (
-          <div className="text-red-300 text-sm mt-2">
-            This car cannot be deleted
-          </div>
-        )}
-      </div>
-    </motion.div>
-  </div>
-) : (
-  <Link to={`/cars/${car.id}`}>
-    <motion.div
-      className="relative w-full h-[300px] flex justify-center items-center bg-blue-50"
-      whileHover={{ scale: 1.02 }}
-    >
-      <img
-        className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-        src={car.image || "https://via.placeholder.com/300?text=No+Image"}
-        alt={car.title}
-      />
-      <div className="absolute inset-0 bg-black bg-opacity-50 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-center items-center text-white px-4">
-        <div className="text-2xl font-bold mb-2">{car.title}</div>
-        <div className="text-lg mb-2">${car.price}</div>
-        <StarRating rating={parseFloat(car.average_rating)} />
-        <div className="text-sm text-blue-300 mt-2">
-          {car.carowner ? `Owned by ${car.carowner.name}` : "Not Owned Yet"}
-        </div>
-      </div>
-    </motion.div>
-  </Link>
-)}
-
-              {/* Bottom Info */}
-              <div className="p-4 bg-gradient-to-r from-blue-100 to-white">
-                <div className="text-blue-800 font-bold text-lg truncate">
-                  {car.title}
+                  <div className="relative w-full h-[200px] flex justify-center items-center bg-blue-50">
+                    <img
+                      className="w-full h-full object-cover"
+                      src={car.image || "https://via.placeholder.com/300?text=No+Image"}
+                      alt={car.title}
+                    />
+                  </div>
                 </div>
-                <div className="text-gray-700 font-semibold mt-1">
-                  ${car.price}
+              ) : (
+                <Link to={`/cars/${car.id}`} className="flex flex-col h-full">
+                  <div className="relative w-full h-[200px] flex justify-center items-center bg-blue-50">
+                    <img
+                      className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                      src={car.image || "https://via.placeholder.com/300?text=No+Image"}
+                      alt={car.title}
+                    />
+                    <div className="absolute inset-0 bg-black bg-opacity-50 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-center items-center text-white px-4">
+                      <div className="text-xl font-bold mb-1">{car.title}</div>
+                      <div className="text-md mb-1">${car.price}</div>
+                      <StarRating rating={parseFloat(car.average_rating)} />
+                    </div>
+                  </div>
+                </Link>
+              )}
+
+              {/* Card Content with Fixed Height */}
+              <div className="p-4 flex flex-col h-[250px]"> 
+                {/* Content Area (Flexible Height) */}
+                <div className="flex-grow">
+                  <h3 className="text-blue-800 font-bold text-lg truncate">
+                    {car.title}
+                  </h3>
+                  <p className="text-gray-700 font-semibold mt-1">
+                    ${car.price}
+                  </p>
+                  <p className="text-gray-600 text-sm mt-2 line-clamp-3">
+                    {car.description || "No description available"}
+                  </p>
+                </div>
+
+                {/* View Details Button - Anchored at the Bottom */}
+                <div className="mt-auto pt-2 border-t border-gray-200">
+                  <Link 
+                    to={`/cars/${car.id}`}
+                    className="w-full block text-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                  >
+                    View Details
+                  </Link>
                 </div>
               </div>
 
-              {/* Update Button (hidden in delete mode) */}
+              {/* Update Button */}
               {authToken && ![8, 9, 10].includes(car.id) && !isDeleteMode && (
                 <button
                   onClick={() => {
                     setSelectedCar(car);
                     setIsUpdateCarModalOpen(true);
                   }}
-                  className="absolute bottom-4 right-4 p-2 bg-blue-600 text-white rounded-full hover:bg-blue-700 transition-all"
+                  className="absolute top-2 right-2 p-2 bg-blue-600 text-white rounded-full hover:bg-blue-700 transition-all"
                 >
                   <PencilSquareIcon className="h-5 w-5" />
                 </button>
@@ -378,7 +354,6 @@ const Car = () => {
         ))}
       </div>
 
-      {/* No Cars Found */}
       {!loading && filteredCars.length === 0 && (
         <motion.div
           className="flex flex-col items-center justify-center mt-10 text-gray-600"
@@ -395,14 +370,12 @@ const Car = () => {
         </motion.div>
       )}
 
-      {/* Create Car Modal */}
       <CreateCarModal
         isOpen={isCreateCarModalOpen}
         closeModal={() => setIsCreateCarModalOpen(false)}
         onCreateSuccess={handleCreateCarSuccess}
       />
 
-      {/* Update Car Modal */}
       <UpdateCarModal
         isOpen={isUpdateCarModalOpen}
         closeModal={() => setIsUpdateCarModalOpen(false)}

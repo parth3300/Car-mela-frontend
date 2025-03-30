@@ -63,7 +63,7 @@ const CarownerModal = ({ isOpen, closeModal, carowner, onDeleteSuccess }) => {
     setLoading(true);
 
     try {
-      const response = await axios.delete(
+      await axios.delete(
         `${BACKEND_URL}/store/carowners/${carowner.id}/`,
         {
           headers: {

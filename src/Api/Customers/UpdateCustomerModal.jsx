@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { motion } from "framer-motion";
-import { XMarkIcon, PhoneIcon } from "@heroicons/react/24/solid";
+import { XMarkIcon } from "@heroicons/react/24/solid";
 import { BACKEND_URL } from "../../Constants/constant";
 
 const UpdateCustomerModal = ({
