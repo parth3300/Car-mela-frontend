@@ -35,14 +35,18 @@ const PaymentSuccess = () => {
         headers: { Authorization: `Bearer ${authToken}` },
       });
 
+      // Extract only the needed properties from the payment intent
+      const paymentIntent = response.data.session.payment_intent;
+      const amountTotal = response.data.session.amount_total / 100;
+
       setPaymentStatus({
         loading: false,
         success: true,
         error: null,
         carDetails: response.data.car,
         paymentDetails: {
-          transactionId: response.data.session.payment_intent,
-          amount: response.data.session.amount_total / 100,
+          transactionId: typeof paymentIntent === 'object' ? paymentIntent.id : paymentIntent,
+          amount: amountTotal,
           date: new Date().toISOString(),
         },
         customerDetails: {
