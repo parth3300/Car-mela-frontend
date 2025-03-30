@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from "react";
 import axios from "axios";
 import { BACKEND_URL } from "../../Constants/constant";
 import { motion } from "framer-motion";
+import { PhotoIcon } from "@heroicons/react/24/solid";
 
 // Predefined list of dial codes
 const DIAL_CODES = [
@@ -24,17 +25,18 @@ const CreateDealershipModal = ({ onClose, onCreated }) => {
     phone_number: "", // Phone number field
     address: "",
     ratings: 1,
+    image: null, // Image field
   });
 
+  const [previewImage, setPreviewImage] = useState(null); // For image preview
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null); // State to store backend errors
   const [addressSuggestions, setAddressSuggestions] = useState([]); // State for address suggestions
   const [showSuggestions, setShowSuggestions] = useState(false); // State to show/hide suggestions
 
   const authToken = localStorage.getItem("authToken");
-
-  // Ref for the modal container
-  const modalRef = useRef(null);
+  const fileInputRef = useRef(null); // Ref for file input
+  const modalRef = useRef(null); // Ref for the modal container
 
   // Handle clicks outside the modal
   useEffect(() => {
@@ -44,10 +46,7 @@ const CreateDealershipModal = ({ onClose, onCreated }) => {
       }
     };
 
-    // Add event listener when the modal is mounted
     document.addEventListener("mousedown", handleClickOutside);
-
-    // Clean up the event listener when the modal is unmounted
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
@@ -64,7 +63,7 @@ const CreateDealershipModal = ({ onClose, onCreated }) => {
       const response = await axios.get(
         `https://nominatim.openstreetmap.org/search?format=json&q=${query}&limit=5`
       );
-      setAddressSuggestions(response.data); // Set the fetched suggestions
+      setAddressSuggestions(response.data);
     } catch (error) {
       console.error("Error fetching address suggestions:", error);
       setAddressSuggestions([]);
@@ -88,15 +87,43 @@ const CreateDealershipModal = ({ onClose, onCreated }) => {
   const handleAddressChange = (e) => {
     const value = e.target.value;
     setFormData({ ...formData, address: value });
-    fetchAddressSuggestions(value); // Fetch suggestions as the user types
-    setShowSuggestions(true); // Show suggestions dropdown
+    fetchAddressSuggestions(value);
+    setShowSuggestions(true);
   };
 
   // Handle address selection from suggestions
   const handleAddressSelect = (address) => {
     setFormData({ ...formData, address: address.display_name });
-    setAddressSuggestions([]); // Clear suggestions
-    setShowSuggestions(false); // Hide suggestions dropdown
+    setAddressSuggestions([]);
+    setShowSuggestions(false);
+  };
+
+  // Handle image file change
+  const handleImageChange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.match('image.*')) {
+      setError("Please select an image file (JPEG, PNG)");
+      return;
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      setError("Image size should be less than 5MB");
+      return;
+    }
+
+    setFormData({ ...formData, image: file });
+    setError(null); // Clear any previous errors
+
+    // Create preview
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setPreviewImage(reader.result);
+    };
+    reader.readAsDataURL(file);
   };
 
   // Handle form submission
@@ -108,28 +135,29 @@ const CreateDealershipModal = ({ onClose, onCreated }) => {
     try {
       const data = new FormData();
       data.append("dealership_name", formData.dealership_name);
-      data.append("dial_code", formData.dial_code); // Add dial code
-      data.append("phone_number", formData.phone_number); // Add phone number
+      data.append("dial_code", formData.dial_code);
+      data.append("phone_number", formData.phone_number);
       data.append("address", formData.address);
       data.append("ratings", formData.ratings);
+      if (formData.image) {
+        data.append("image", formData.image);
+      }
 
       await axios.post(`${BACKEND_URL}/store/dealerships/`, data, {
         headers: {
           Authorization: `Bearer ${authToken}`,
-          "Content-Type": "multipart/form-data", // Required for file upload
+          "Content-Type": "multipart/form-data",
         },
       });
 
-      onCreated(); // Notify parent to refetch
-      onClose(); // Close modal after successful insertion
+      onCreated();
+      onClose();
     } catch (error) {
       console.error("Error creating dealership:", error);
 
-      // Handle backend errors
       if (error.response) {
         const { data } = error.response;
         if (data && typeof data === "object") {
-          // If the error is an object (e.g., { "contact": ["A valid integer is required."] })
           const errorMessages = Object.entries(data).map(([field, messages]) => (
             <div key={field}>
               <strong>{field}:</strong> {messages.join(" ")}
@@ -137,7 +165,6 @@ const CreateDealershipModal = ({ onClose, onCreated }) => {
           ));
           setError(errorMessages);
         } else if (typeof data === "string") {
-          // If the error is a string (e.g., "Invalid data")
           setError(data);
         } else {
           setError("An error occurred. Please try again.");
@@ -153,7 +180,7 @@ const CreateDealershipModal = ({ onClose, onCreated }) => {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
       <motion.div
-        ref={modalRef} // Attach the ref to the modal container
+        ref={modalRef}
         initial={{ scale: 0.8, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         exit={{ scale: 0.8, opacity: 0 }}
@@ -169,6 +196,46 @@ const CreateDealershipModal = ({ onClose, onCreated }) => {
         )}
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+          {/* Dealership Image */}
+          <div>
+            <label className="block text-gray-700 mb-2">Dealership Image (Optional)</label>
+            <div className="flex items-center gap-4">
+              <div 
+                onClick={() => fileInputRef.current.click()}
+                className="w-20 h-20 rounded-lg border-2 border-dashed border-gray-300 flex items-center justify-center cursor-pointer hover:border-blue-400 transition-colors overflow-hidden"
+              >
+                {previewImage ? (
+                  <img 
+                    src={previewImage} 
+                    alt="Dealership preview" 
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <PhotoIcon className="w-8 h-8 text-gray-400" />
+                )}
+              </div>
+              <div className="flex-1">
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current.click()}
+                  className="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm transition-colors"
+                >
+                  {formData.image ? "Change Image" : "Upload Image"}
+                </button>
+                <p className="text-xs text-gray-500 mt-1">
+                  JPEG or PNG (max 5MB)
+                </p>
+              </div>
+              <input
+                type="file"
+                ref={fileInputRef}
+                onChange={handleImageChange}
+                accept="image/*"
+                className="hidden"
+              />
+            </div>
+          </div>
+
           {/* Dealership Name */}
           <div>
             <label className="block text-gray-700 mb-2">Dealership Name</label>
@@ -209,7 +276,7 @@ const CreateDealershipModal = ({ onClose, onCreated }) => {
                 className="w-3/4 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-400 outline-none"
                 placeholder="Enter phone number"
                 required
-                maxLength={10} // Limit input to 10 digits
+                maxLength={10}
               />
             </div>
           </div>
@@ -246,18 +313,22 @@ const CreateDealershipModal = ({ onClose, onCreated }) => {
 
           {/* Ratings */}
           <div>
-            <label className="block text-gray-700 mb-2">Ratings (1-5)</label>
-            <input
-              type="number"
-              name="ratings"
-              min="1"
-              max="5"
-              value={formData.ratings}
-              onChange={handleChange}
-              required
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-400 outline-none"
-            />
-          </div>
+                      <label className="block text-gray-700">Ratings:</label>
+                      <select
+                        name="ratings"
+                        value={formData.ratings}
+                        onChange={handleChange}
+                        className="w-full p-2 border rounded-md"
+                        required
+                      >
+                        <option value="">Select a rating</option>
+                        {[1, 2, 3, 4, 5].map((rating) => (
+                          <option key={rating} value={rating}>
+                            {rating}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
 
           {/* Buttons */}
           <div className="flex justify-end gap-4 mt-6">
@@ -269,12 +340,41 @@ const CreateDealershipModal = ({ onClose, onCreated }) => {
               Cancel
             </button>
 
+
             <button
               type="submit"
               disabled={loading}
-              className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all"
+              className={`px-6 py-2 ${
+                loading ? "bg-blue-700" : "bg-blue-600"
+              } text-white rounded-lg hover:bg-blue-700 transition-all flex items-center justify-center min-w-[100px]`}
             >
-              {loading ? "Creating..." : "Create"}
+              {loading ? (
+                <>
+                  <svg
+                    className="animate-spin -ml-1 mr-2 h-4 w-4 text-white"
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                  >
+                    <circle
+                      className="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                    ></circle>
+                    <path
+                      className="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                    ></path>
+                  </svg>
+                  Creating...
+                </>
+              ) : (
+                "Create"
+              )}
             </button>
           </div>
         </form>

@@ -1,14 +1,14 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { Link } from "react-router-dom";
-import StarRating from "../../components/StarRating";
+import StarRating from "../../Components/StarRating";
 import { BACKEND_URL } from "../../Constants/constant";
 import { motion, AnimatePresence } from "framer-motion";
 import { useDebounce } from "use-debounce";
 import CreateCarModal from "./CreateCarModal";
 import UpdateCarModal from "./UpdateCarModal";
 import { XMarkIcon, PencilSquareIcon, TrashIcon } from "@heroicons/react/24/solid";
-import SkeletonLoader from "../../components/SkeletonLoader";
+import SkeletonLoader from "../../Components/SkeletonLoader";
 
 const Car = () => {
   const [cars, setCars] = useState([]);

@@ -6,11 +6,12 @@ import {
   PhoneIcon, 
   UserIcon, 
   EnvelopeIcon,
-  CalendarIcon 
+  CalendarIcon,
+  PhotoIcon
 } from "@heroicons/react/24/solid";
 import { jwtDecode } from "jwt-decode";
 import { BACKEND_URL } from "../../Constants/constant";
-import Notification from "../../components/Globle/Notification";
+import Notification from "../../Components/Globle/Notification";
 
 const CustomerModal = ({
   isOpen,
@@ -27,6 +28,9 @@ const CustomerModal = ({
   const [userId, setUserId] = useState("");
   const authToken = localStorage.getItem("authToken");
   const modalRef = useRef(null);
+
+  // Default profile picture if none is provided
+  const defaultProfilePic = "https://cdn.pixabay.com/photo/2015/10/05/22/37/blank-profile-picture-973460_1280.png";
 
   // Get user ID from token
   useEffect(() => {
@@ -126,8 +130,21 @@ const CustomerModal = ({
           {/* Customer Header */}
           <div className="text-center mb-6">
             <div className="flex flex-col items-center">
-              <div className="bg-blue-100 p-4 rounded-full mb-4">
-                <UserIcon className="h-12 w-12 text-blue-600" />
+              <div className="relative mb-4">
+                {customer.profile_picture ? (
+                  <img
+                    src={customer.profile_picture}
+                    alt={customer.name}
+                    className="h-24 w-24 rounded-full object-cover border-4 border-blue-100"
+                    onError={(e) => {
+                      e.target.src = defaultProfilePic;
+                    }}
+                  />
+                ) : (
+                  <div className="h-24 w-24 rounded-full bg-blue-100 flex items-center justify-center border-4 border-blue-100">
+                    <PhotoIcon className="h-12 w-12 text-blue-600" />
+                  </div>
+                )}
               </div>
               <h2 className="text-2xl font-bold text-gray-800">
                 {customer.name}
@@ -161,7 +178,7 @@ const CustomerModal = ({
               <div>
                 <p className="text-sm font-medium text-gray-500">Registered</p>
                 <p className="text-gray-800">
-                  {new Date(customer.user.date_joined).toLocaleDateString()}
+                  {new Date(customer.registered_date).toLocaleDateString()}
                 </p>
               </div>
             </div>

@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import axios from "axios";
 import { motion } from "framer-motion";
 import { BACKEND_URL } from "../../Constants/constant";
-import Notification from "../../components/Globle/Notification";
+import Notification from "../../Components/Globle/Notification";
 
 const CompanyModal = ({
   isOpen,
@@ -174,7 +174,7 @@ const CompanyModal = ({
                 className="bg-white rounded-xl shadow-xl p-6 w-full max-w-sm text-center"
               >
                 <h3 className="text-lg font-semibold text-gray-800 mb-4">
-                  Confirm Removal
+                  Confirm Delete
                 </h3>
                 <p className="text-gray-600 mb-6">
                   Are you sure you want to remove{" "}

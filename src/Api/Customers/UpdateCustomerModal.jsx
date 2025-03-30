@@ -32,7 +32,7 @@ const UpdateCustomerModal = ({
       
       // Set preview image if customer already has a profile picture
       if (customer.profile_pic) {
-        setPreviewImage(`${BACKEND_URL}${customer.profile_pic}`);
+        setPreviewImage(`${customer.profile_pic}`);
       }
     }
   }, [customer]);

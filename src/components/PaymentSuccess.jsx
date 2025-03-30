@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import axios from "axios";
 import { motion } from "framer-motion";
-import { CheckCircle, AlertCircle, Download } from "lucide-react";
+import { CheckCircle, AlertCircle, Download, X } from "lucide-react";
 import { BACKEND_URL } from "../Constants/constant";
 import PdfGenerator from "./PdfGenerator";
 import { PDFDownloadLink } from '@react-pdf/renderer';
@@ -53,11 +53,6 @@ const PaymentSuccess = () => {
           phone_number: "555-123-4567",
         },
       });
-
-      // Navigate after 8 seconds
-      setTimeout(() => {
-        navigate("/");
-      }, 8000);
     } catch (error) {
       console.error("Payment verification failed:", error);
       setPaymentStatus({
@@ -74,6 +69,10 @@ const PaymentSuccess = () => {
   useEffect(() => {
     verifyPayment();
   }, [sessionId]);
+
+  const handleClose = () => {
+    navigate("/");
+  };
 
   if (paymentStatus.loading) {
     return (
@@ -104,8 +103,17 @@ const PaymentSuccess = () => {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6 }}
-        className="max-w-3xl mx-auto"
+        className="max-w-3xl mx-auto relative"
       >
+        {/* Close button */}
+        <button
+          onClick={handleClose}
+          className="absolute top-0 right-0 p-2 rounded-full hover:bg-gray-100 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+          aria-label="Close"
+        >
+          <X className="h-6 w-6 text-gray-500" />
+        </button>
+
         {paymentStatus.success ? (
           <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
             <div className="p-8 sm:p-10">
@@ -170,6 +178,38 @@ const PaymentSuccess = () => {
                   </div>
                 </div>
               )}
+
+              <div className="mt-10 border-t border-gray-200 pt-8">
+                <h2 className="text-xl font-semibold text-gray-900 mb-4">
+                  Order Details
+                </h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <h3 className="text-sm font-medium text-gray-500">Transaction ID</h3>
+                    <p className="mt-1 text-sm text-gray-900">
+                      {paymentStatus.paymentDetails?.transactionId || 'N/A'}
+                    </p>
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-medium text-gray-500">Amount Paid</h3>
+                    <p className="mt-1 text-sm text-gray-900">
+                      ${paymentStatus.paymentDetails?.amount?.toLocaleString() || '0.00'}
+                    </p>
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-medium text-gray-500">Date</h3>
+                    <p className="mt-1 text-sm text-gray-900">
+                      {new Date(paymentStatus.paymentDetails?.date).toLocaleString() || 'N/A'}
+                    </p>
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-medium text-gray-500">Customer</h3>
+                    <p className="mt-1 text-sm text-gray-900">
+                      {paymentStatus.customerDetails?.name || 'N/A'}
+                    </p>
+                  </div>
+                </div>
+              </div>
 
               <div className="mt-10 border-t border-gray-200 pt-8">
                 <h2 className="text-xl font-semibold text-gray-900 mb-4">
@@ -256,7 +296,7 @@ const PaymentSuccess = () => {
                 </button>
               </div>
               
-              <div className="mt-6">
+              <div className="mt-6 flex justify-center">
                 {paymentStatus.carDetails && paymentStatus.customerDetails && paymentStatus.paymentDetails && (
                   <PDFDownloadLink
                     document={
@@ -267,12 +307,12 @@ const PaymentSuccess = () => {
                       />
                     }
                     fileName={`purchase-confirmation-${paymentStatus.paymentDetails.transactionId}.pdf`}
-                    className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+                    className="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
                   >
                     {({ loading }) => (
                       <>
                         <Download className="h-5 w-5 mr-2" />
-                        {loading ? 'Generating PDF...' : 'Download Receipt'}
+                        {loading ? 'Generating Receipt...' : 'Download Receipt (PDF)'}
                       </>
                     )}
                   </PDFDownloadLink>

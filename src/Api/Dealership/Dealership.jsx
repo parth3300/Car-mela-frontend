@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
-import StarRating from "../../components/StarRating";
+import StarRating from "../../Components/StarRating";
 import { BACKEND_URL } from "../../Constants/constant";
 import { motion, AnimatePresence } from "framer-motion";
 import { BuildingStorefrontIcon, MapPinIcon } from "@heroicons/react/24/solid";
 import CreateDealershipModal from "./CreateDealershipModal";
 import DealershipModal from "./DealershipModal";
-import Notification from "../../components/Globle/Notification";
-import SkeletonLoader from "../../components/SkeletonLoader";
+import Notification from "../../Components/Globle/Notification";
+import SkeletonLoader from "../../Components/SkeletonLoader";
 
 const Dealership = () => {
   const [dealerships, setDealerships] = useState([]);
@@ -19,7 +19,7 @@ const Dealership = () => {
     message: "",
     type: "",
   });
-  const [processing, setProcessing] = useState(false); // Track processing state
+  const [processing, setProcessing] = useState(false);
 
   const authToken = localStorage.getItem("authToken");
 
@@ -44,14 +44,14 @@ const Dealership = () => {
   }, []);
 
   const handleCreateDealership = async () => {
-    setProcessing(true); // Start processing
+    setProcessing(true);
     try {
-      await fetchDealerships(); // Refetch dealerships after creation
+      await fetchDealerships();
       setNotification({
         message: "Dealership created successfully! 🎉",
         type: "success",
       });
-      setShowCreateModal(false); // Close the modal after successful creation
+      setShowCreateModal(false);
     } catch (error) {
       console.error("Error creating dealership:", error);
       setNotification({
@@ -59,7 +59,7 @@ const Dealership = () => {
         type: "error",
       });
     } finally {
-      setProcessing(false); // End processing
+      setProcessing(false);
     }
   };
 
@@ -70,6 +70,30 @@ const Dealership = () => {
       (dealership.address && dealership.address.toLowerCase().includes(query))
     );
   });
+
+  // Static placeholder images based on dealership name initials
+  const getPlaceholderImage = (name) => {
+    const colors = [
+      'bg-blue-500', 'bg-green-500', 'bg-red-500', 
+      'bg-yellow-500', 'bg-purple-500', 'bg-pink-500'
+    ];
+    const initials = name ? name.charAt(0).toUpperCase() : 'D';
+    const colorIndex = name ? name.charCodeAt(0) % colors.length : 0;
+    
+    return (
+      <div className={`w-full h-full ${colors[colorIndex]} flex items-center justify-center text-white text-6xl font-bold`}>
+        {initials}
+      </div>
+    );
+  };
+
+  // Function to truncate text with ellipsis
+  const truncateText = (text, maxLength) => {
+    if (!text) return "Unknown Location";
+    return text.length > maxLength 
+      ? `${text.substring(0, maxLength)}...` 
+      : text;
+  };
 
   return (
     <div className="bg-gradient-to-b from-blue-50 to-white min-h-screen p-8 flex flex-col items-center">
@@ -129,18 +153,28 @@ const Dealership = () => {
               initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: index * 0.05, duration: 0.3 }}
-              className="h-full" // Ensure all cards have the same height
+              className="h-full"
             >
               <div
                 onClick={() => setSelectedDealership(dealership)}
                 className="relative bg-white rounded-2xl overflow-hidden shadow-xl cursor-pointer group transform transition-all duration-300 border border-gray-100 h-full flex flex-col"
               >
-                {/* Dealership Icon */}
-                <div className="relative w-full h-48 flex justify-center items-center bg-blue-50">
-                  <div className="bg-blue-100 p-4 rounded-full">
-                    <BuildingStorefrontIcon className="h-10 w-10 text-blue-600" />
-                  </div>
-
+                {/* Dealership Image */}
+                <div className="relative w-full h-48 overflow-hidden">
+                  {dealership.image ? (
+                    <img
+                      src={dealership.image}
+                      alt={dealership.dealership_name}
+                      className="w-full h-full object-cover"
+                      onError={(e) => {
+                        e.target.src = '';
+                        e.target.alt = 'Image failed to load';
+                      }}
+                    />
+                  ) : (
+                    getPlaceholderImage(dealership.dealership_name)
+                  )}
+                  
                   {/* Overlay on hover */}
                   <div className="absolute inset-0 bg-black bg-opacity-50 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-center items-center text-white px-4">
                     <div className="text-2xl font-bold mb-2">
@@ -156,10 +190,10 @@ const Dealership = () => {
                     <div className="text-blue-800 font-bold text-lg truncate">
                       {dealership.dealership_name}
                     </div>
-                    <div className="flex items-center text-gray-600 text-sm mt-2">
-                      <MapPinIcon className="h-5 w-5 mr-2 text-blue-400" />
-                      <span className="truncate">
-                        {dealership.address || "Unknown Location"}
+                    <div className="flex items-start text-gray-600 text-sm mt-2">
+                      <MapPinIcon className="h-5 w-5 mr-2 text-blue-400 flex-shrink-0" />
+                      <span className="break-words line-clamp-2">
+                        {truncateText(dealership.address || "Unknown Location", 50)}
                       </span>
                     </div>
                   </div>
@@ -188,9 +222,9 @@ const Dealership = () => {
       <AnimatePresence>
         {showCreateModal && (
           <CreateDealershipModal
-            onClose={() => !processing && setShowCreateModal(false)} // Prevent closing during processing
+            onClose={() => !processing && setShowCreateModal(false)}
             onCreated={handleCreateDealership}
-            processing={processing} // Pass processing state to modal
+            processing={processing}
           />
         )}
       </AnimatePresence>

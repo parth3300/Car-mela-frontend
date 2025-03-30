@@ -8,7 +8,7 @@ import CustomerModal from "./CustomerModal";
 import UpdateCustomerModal from "./UpdateCustomerModal";
 import { PencilSquareIcon } from "@heroicons/react/24/solid";
 import { jwtDecode } from "jwt-decode";
-import SkeletonLoader from "../../components/SkeletonLoader";
+import SkeletonLoader from "../../Components/SkeletonLoader";
 
 const Customers = () => {
   const [customers, setCustomers] = useState([]);
@@ -183,10 +183,10 @@ const Customers = () => {
                 {/* Profile Picture */}
                 <div className="bg-blue-100 p-4 rounded-full mb-4">
                   {customer.profile_pic ? (
-                    <img 
-                      src={`${BACKEND_URL}${customer.profile_pic}`} 
-                      alt="Profile"
-                      className="h-10 w-10 rounded-full object-cover"
+                    <img
+                      src={customer.profile_pic}
+                      alt={customer.name}
+                      className="h-16 w-16 rounded-full object-cover"
                     />
                   ) : (
                     <UserIcon className="h-10 w-10 text-blue-600" />
@@ -203,13 +203,9 @@ const Customers = () => {
                     <PhoneIcon className="h-4 w-4 mr-1 text-blue-400" />
                     +{customer.dial_code} {customer.phone_number}
                   </div>
+                  
                 </div>
 
-                {/* User Info on Hover */}
-                <div className="absolute inset-0 bg-black bg-opacity-50 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-center items-center text-white px-4">
-                  <p className="text-lg font-semibold">Username:</p>
-                  <p className="text-xl font-bold">{customer.name}</p>
-                </div>
 
                 {/* Update Button */}
                 {authToken && user_id && user_id === customer?.user && (

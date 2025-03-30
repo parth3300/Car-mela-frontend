@@ -1,21 +1,21 @@
 import React from "react";
 import { BrowserRouter as Router, Route, Routes, Navigate } from "react-router-dom";
 import CarList from "./Api/Car/Car";
-import Home from "./components/Home";
-import Navbar from "./components/Navbar";
-import Signup from "./components/Signup";
-import About from "./components/About";
+import Home from "./Components/Home";
+import Navbar from "./Components/Navbar";
+import Signup from "./Components/Signup";
+import About from "./Components/About";
 import CompanyList from "./Api/Company/Company";
 import Carowners from "./Api/Carowner/Carowner";
 import DealershipList from "./Api/Dealership/Dealership";
 import CarDetails from "./Api/Car/CarDetails ";
-import NotFound from "./components/NotFound";
-import Login from "./components/Login";
+import NotFound from "./Components/NotFound";
+import Login from "./Components/Login";
 import { AuthProvider, useAuth } from "./context/AuthContext";  // ✅ Import Auth Context
-import Footer from "./components/Footer";
-import PaymentSuccess from "./components/PaymentSuccess";
-import PaymentCanceled from "./components/PaymentCanceled";
-import Support from "./components/Support";
+import Footer from "./Components/Footer";
+import PaymentSuccess from "./Components/PaymentSuccess";
+import PaymentCanceled from "./Components/PaymentCanceled";
+import Support from "./Components/Support";
 import Customers from "./Api/Customers/Customer";
 
 const AuthRedirect = ({ children }) => {

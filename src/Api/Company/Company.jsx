@@ -1,14 +1,14 @@
+// src/components/Company/Company.jsx
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 import CompanyModal from "./CompanyModal";
 import CreateCompanyModal from "./CreateCompanyModal";
 import { BACKEND_URL } from "../../Constants/constant";
 import { motion, AnimatePresence } from "framer-motion";
-import Notification from "../../components/Globle/Notification";
+import ResponseHandler from "../../Components/Globle/ResponseHandler";
 import UpdateCompanyModal from "./UpdateCompanyModal";
 import { PencilSquareIcon } from "@heroicons/react/24/solid";
-import SkeletonLoader from "../../components/SkeletonLoader";
-
+import SkeletonLoader from "../../Components/SkeletonLoader";
 
 const Company = () => {
   const [companies, setCompanies] = useState([]);
@@ -37,7 +37,7 @@ const Company = () => {
       } catch (error) {
         console.error("Error fetching companies:", error);
         setNotification({
-          message: "Failed to fetch companies. Please try again later.",
+          message: error.message || "Failed to fetch companies",
           type: "error",
         });
       } finally {
@@ -54,7 +54,7 @@ const Company = () => {
     );
     setSelectedCompany(null);
     setNotification({
-      message: "Company deleted successfully!",
+      message: "delete",
       type: "success",
     });
     setDeleteProcessing(false);
@@ -66,14 +66,14 @@ const Company = () => {
       const response = await axios.get(`${BACKEND_URL}/store/companies/`);
       setCompanies(response.data);
       setNotification({
-        message: "Company created successfully! 🎉",
+        message: "create",
         type: "success",
       });
       setIsCreateModalOpen(false);
     } catch (error) {
       console.error("Error creating company:", error);
       setNotification({
-        message: "Failed to create company. Please try again.",
+        message: error.message || "Failed to create company",
         type: "error",
       });
     } finally {
@@ -89,7 +89,7 @@ const Company = () => {
     );
     setIsUpdateModalOpen(false);
     setNotification({
-      message: "Company updated successfully! 🎉",
+      message: "update",
       type: "success",
     });
     setUpdateProcessing(false);
@@ -254,16 +254,14 @@ const Company = () => {
         )}
       </AnimatePresence>
 
-      {/* Notification */}
-      <AnimatePresence>
-        {notification.message && (
-          <Notification
-            message={notification.message}
-            type={notification.type}
-            onClose={() => setNotification({ message: "", type: "" })}
-          />
-        )}
-      </AnimatePresence>
+      {/* Response Handler */}
+      <ResponseHandler
+        resourceName="Company"
+        action={processing ? "create" : updateProcessing ? "update" : deleteProcessing ? "delete" : ""}
+        error={notification.type === "error" ? { message: notification.message } : null}
+        success={notification.type === "success" ? { message: notification.message } : null}
+        onClear={() => setNotification({ message: "", type: "" })}
+      />
     </div>
   );
 };

@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import axios from "axios";
 import { motion } from "framer-motion";
 import { BACKEND_URL } from "../../Constants/constant";
-import Notification from "../../components/Globle/Notification";
+import Notification from "../../Components/Globle/Notification";
 
 const DealershipModal = ({
   isOpen,
@@ -126,9 +126,13 @@ const DealershipModal = ({
 
           {/* Dealership Details */}
           <div className="space-y-4 text-gray-700">
-            <div className="flex justify-between">
+          <div className="flex justify-between">
               <span className="font-semibold">Contact:</span>
-              <span>{dealership.contact || "N/A"}</span>
+              <span>
+                {dealership.dial_code && dealership.phone_number
+                  ? `+${dealership.dial_code} ${dealership.phone_number}`
+                  : "N/A"}
+              </span>
             </div>
             <div className="flex justify-between">
               <span className="font-semibold">Address:</span>

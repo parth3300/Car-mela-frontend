@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from "react";
 import axios from "axios";
 import { motion } from "framer-motion";
 import { BACKEND_URL } from "../../Constants/constant";
-import Notification from "../../components/Globle/Notification";
+import Notification from "../../Components/Globle/Notification";
 import { jwtDecode } from "jwt-decode";
 import { XMarkIcon } from "@heroicons/react/24/solid";
 

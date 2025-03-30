@@ -1,4 +1,4 @@
-// src/components/CarAnimation.js
+// src/Components/CarAnimation.js
 import React from "react";
 import { motion } from "framer-motion";
 
