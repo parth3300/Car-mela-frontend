@@ -173,13 +173,11 @@ const UpdateCompanyModal = ({ isOpen, onClose, company, onUpdateSuccess }) => {
         details: null
       });
 
-      // Don't reset loading state here - keep it true until modal closes
+      // Call success callback
       onUpdateSuccess(response.data);
       
-      // Close modal after success
-      setTimeout(() => {
-        onClose();
-      }, 1500);
+      // Keep loading state true until modal closes
+      // The modal will close after 1.5 seconds, and loading will be reset in the useEffect
     } catch (error) {
       console.error("Error updating company:", error);
       
@@ -208,10 +206,19 @@ const UpdateCompanyModal = ({ isOpen, onClose, company, onUpdateSuccess }) => {
         details: errorDetails
       });
       
-      // Only reset loading state on error
       setLoading(false);
     }
   };
+
+  // Close modal after success notification
+  useEffect(() => {
+    if (notification.type === 'success') {
+      const timer = setTimeout(() => {
+        onClose();
+      }, 1500);
+      return () => clearTimeout(timer);
+    }
+  }, [notification.type, onClose]);
 
   // Reset loading state when modal closes
   useEffect(() => {
@@ -361,23 +368,20 @@ const UpdateCompanyModal = ({ isOpen, onClose, company, onUpdateSuccess }) => {
                 />
               </div>
 
-              {/* Buttons */}
+              {/* Submit Button */}
               <div className="flex justify-end gap-4 mt-6">
                 <button
                   type="button"
                   onClick={onClose}
                   disabled={loading}
-                  className={`px-4 py-2 ${
-                    loading ? "bg-gray-200" : "bg-gray-300"
-                  } text-gray-700 rounded-lg hover:bg-gray-400 transition-all disabled:opacity-50`}
+                  className="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg transition-colors disabled:opacity-50"
                 >
                   Cancel
                 </button>
-
                 <button
                   type="submit"
                   disabled={loading}
-                  className={`px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all flex items-center justify-center min-w-[100px] ${
+                  className={`px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center min-w-[120px] ${
                     loading ? "bg-blue-700 cursor-wait" : ""
                   }`}
                 >

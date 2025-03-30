@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useRef } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import axios from "axios";
 import { jwtDecode } from "jwt-decode";
-import { motion, AnimatePresence } from "framer-motion";
 import { BACKEND_URL } from "../../Constants/constant";
-import { CheckCircleIcon, ChevronDownIcon } from "@heroicons/react/24/solid";
+import { CheckCircleIcon, ChevronDownIcon, PhotoIcon, XMarkIcon } from "@heroicons/react/24/solid";
+import ResponseHandler from "../../Components/Globle/ResponseHandler";
 
-// Updated DIAL_CODES array with flag emojis (optional but nice UX)
 const DIAL_CODES = [
   { code: "+1", country: "USA", flag: "🇺🇸" },
   { code: "+91", country: "India", flag: "🇮🇳" },
@@ -84,26 +84,34 @@ const DialCodeSelector = ({ selectedCode, onChange }) => {
   );
 };
 
-const CreateCarOwnerModal = ({ isOpen, closeModal, onCreateSuccess, setNotification }) => {
+const CreateCarOwnerModal = ({ isOpen, closeModal, onCreateSuccess }) => {
   const [formData, setFormData] = useState({
-    dial_code: DIAL_CODES[0], // Default dial code object
-    phone_number: "", // Phone number field
+    dial_code: DIAL_CODES[0],
+    phone_number: "",
+    profile_pic: null
   });
-  const [profilePic, setProfilePic] = useState(null);
+  const [previewImage, setPreviewImage] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [userId, setUserId] = useState("");
+  const [notification, setNotification] = useState({
+    type: null,
+    message: null,
+    details: null
+  });
 
-  // Ref for the modal container
   const modalRef = useRef(null);
   const successModalRef = useRef(null);
+  const fileInputRef = useRef(null);
 
-  // ✅ Get user id from token on mount
   useEffect(() => {
     const authToken = localStorage.getItem("authToken");
     if (!authToken) {
-      setError("❌ Unauthorized! Please log in.");
+      setNotification({
+        type: 'error',
+        message: 'Unauthorized',
+        details: 'Please log in to continue'
+      });
       return;
     }
 
@@ -114,141 +122,194 @@ const CreateCarOwnerModal = ({ isOpen, closeModal, onCreateSuccess, setNotificat
       if (userIdFromToken) {
         setUserId(userIdFromToken);
       } else {
-        setError("❌ User ID missing in token.");
+        setNotification({
+          type: 'error',
+          message: 'Authentication error',
+          details: 'User ID missing in token'
+        });
       }
     } catch (error) {
       console.error("JWT Decode Error:", error);
-      setError("❌ Invalid token.");
+      setNotification({
+        type: 'error',
+        message: 'Invalid token',
+        details: 'Please log in again'
+      });
     }
   }, []);
 
-  // ✅ Form input handlers
+  const clearNotification = () => {
+    setNotification({
+      type: null,
+      message: null,
+      details: null
+    });
+  };
+
   const handleChange = (e) => {
     const { name, value } = e.target;
 
     if (name === "phone_number") {
-      // Allow only numeric input and limit to 10 digits
       const numericValue = value.replace(/\D/g, "").slice(0, 10);
       setFormData((prev) => ({ ...prev, [name]: numericValue }));
-    } else {
-      setFormData((prev) => ({ ...prev, [name]: value }));
     }
   };
 
   const handleFileChange = (e) => {
-    setProfilePic(e.target.files[0]);
+    const file = e.target.files[0];
+    if (!file) return;
+
+    if (!file.type.match('image.*')) {
+      setNotification({
+        type: 'error',
+        message: 'Invalid file type',
+        details: 'Please select an image file (JPEG, PNG)'
+      });
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      setNotification({
+        type: 'error',
+        message: 'File too large',
+        details: 'Image size should be less than 5MB'
+      });
+      return;
+    }
+
+    setFormData((prev) => ({ ...prev, profile_pic: file }));
+    clearNotification();
+
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setPreviewImage(reader.result);
+    };
+    reader.readAsDataURL(file);
   };
 
-  // ✅ Submit handler
   const handleSubmit = async (e) => {
     e.preventDefault();
-
-    if (!profilePic) {
-      setError("❌ Please upload a profile picture.");
-      return;
-    }
+    setLoading(true);
+    clearNotification();
 
     if (!userId) {
-      setError("❌ User not authenticated.");
+      setNotification({
+        type: 'error',
+        message: 'Authentication required',
+        details: 'Please log in to continue'
+      });
+      setLoading(false);
       return;
     }
 
-    // Validate phone number field to ensure it has exactly 10 digits
+    if (!formData.profile_pic) {
+      setNotification({
+        type: 'error',
+        message: 'Profile picture required',
+        details: 'Please upload a profile picture'
+      });
+      setLoading(false);
+      return;
+    }
+
     if (formData.phone_number.length !== 10) {
-      setError("❌ Phone number must be exactly 10 digits.");
+      setNotification({
+        type: 'error',
+        message: 'Invalid phone number',
+        details: 'Phone number must be exactly 10 digits'
+      });
+      setLoading(false);
       return;
     }
-
-    setLoading(true);
-    setError("");
-
-    const authToken = localStorage.getItem("authToken");
 
     try {
-      const data = new FormData();
-      data.append("user", userId);
-      data.append("dial_code", formData.dial_code.code); // Use the dial code value
-      data.append("phone_number", formData.phone_number);
-      data.append("profile_pic", profilePic);
+      const formDataToSend = new FormData();
+      formDataToSend.append("user", userId);
+      formDataToSend.append("dial_code", formData.dial_code.code);
+      formDataToSend.append("phone_number", formData.phone_number);
+      formDataToSend.append("profile_pic", formData.profile_pic);
 
-      const response = await axios.post(`${BACKEND_URL}/store/carowners/`, data, {
-        headers: {
-          Authorization: `Bearer ${authToken}`,
-          "Content-Type": "multipart/form-data",
-        },
+      const response = await axios.post(
+        `${BACKEND_URL}/store/carowners/`,
+        formDataToSend,
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("authToken")}`,
+            "Content-Type": "multipart/form-data",
+          },
+        }
+      );
+
+      setNotification({
+        type: 'success',
+        message: 'Registration successful!',
+        details: 'You are now a registered car owner'
       });
 
-      // Reset form data
-      setFormData({ dial_code: DIAL_CODES[0], phone_number: "" });
-      setProfilePic(null);
+      setFormData({ 
+        dial_code: DIAL_CODES[0],
+        phone_number: "",
+        profile_pic: null
+      });
+      setPreviewImage(null);
 
-      // ✅ Show success modal
       setShowSuccessModal(true);
-
-      // Notify parent component
-      if (setNotification) {
-        setNotification({
-          message: "Congratulations! You are now a car owner. 🎉",
-          type: "success",
-        });
-
-        // Clear the notification after 5 seconds
-        setTimeout(() => {
-          setNotification({ message: "", type: "" });
-        }, 5000); // 5 seconds
-      }
-
+      
       if (onCreateSuccess) {
         onCreateSuccess(response.data);
       }
-    } catch (error) {
-      console.error("❌ Error creating car owner:", error);
 
+      setTimeout(() => {
+        closeModal();
+      }, 1500);
+    } catch (error) {
+      console.error("Error creating car owner:", error);
+      
+      let errorMessage = "Registration failed";
+      let errorDetails = "Please try again";
+      
       if (error.response) {
-        const { data } = error.response;
-        if (data && typeof data === "object") {
-          const errorMessages = Object.values(data).flat().join(" ");
-          setError(errorMessages);
-        } else if (typeof data === "string") {
-          setError(data);
+        if (error.response.data) {
+          errorDetails = typeof error.response.data === 'object' 
+            ? Object.entries(error.response.data).map(([field, messages]) => (
+                <div key={field}>
+                  <strong>{field}:</strong> {Array.isArray(messages) ? messages.join(" ") : messages}
+                </div>
+              ))
+            : error.response.data;
         } else {
-          setError("An error occurred. Please try again.");
+          errorDetails = error.response.statusText || "Unknown error occurred";
         }
-      } else {
-        setError("Network error. Please check your connection.");
+      } else if (error.message) {
+        errorDetails = error.message;
       }
+
+      setNotification({
+        type: 'error',
+        message: errorMessage,
+        details: errorDetails
+      });
     } finally {
       setLoading(false);
     }
   };
 
-  // ✅ Closes the success modal AND the form modal
   const handleSuccessClose = () => {
     setShowSuccessModal(false);
     closeModal();
   };
 
-  // ✅ Handle clicking outside the modal
   useEffect(() => {
     const handleClickOutside = (event) => {
-      if (
-        modalRef.current &&
-        !modalRef.current.contains(event.target) &&
-        isOpen
-      ) {
+      if (modalRef.current && !modalRef.current.contains(event.target) && isOpen) {
         closeModal();
       }
-      if (
-        successModalRef.current &&
-        !successModalRef.current.contains(event.target) &&
-        showSuccessModal
-      ) {
+      if (successModalRef.current && !successModalRef.current.contains(event.target) && showSuccessModal) {
         handleSuccessClose();
       }
     };
 
     document.addEventListener("mousedown", handleClickOutside);
-
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
@@ -259,37 +320,86 @@ const CreateCarOwnerModal = ({ isOpen, closeModal, onCreateSuccess, setNotificat
       {/* MAIN FORM MODAL */}
       <AnimatePresence>
         {isOpen && (
-          <motion.div
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-          >
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
             <motion.div
               ref={modalRef}
-              className="bg-white rounded-2xl shadow-xl p-8 w-full max-w-md relative"
               initial={{ scale: 0.8, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.8, opacity: 0 }}
+              className="bg-white rounded-2xl shadow-xl p-8 w-full max-w-md relative"
             >
+              <button
+                onClick={closeModal}
+                disabled={loading}
+                className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition disabled:opacity-50"
+              >
+                <XMarkIcon className="h-6 w-6" />
+              </button>
 
-              <h2 className="text-2xl font-bold text-blue-700 mb-6 text-center">
-                Become Car Owner
-              </h2>
+              <h2 className="text-2xl font-bold mb-6 text-blue-700">Become Car Owner</h2>
+
+              <ResponseHandler
+                type={notification.type}
+                message={notification.message}
+                details={notification.details}
+                onClear={clearNotification}
+              />
 
               {/* Bonus Message */}
               <div className="bg-green-100 border-l-4 border-green-500 text-green-700 p-4 mb-6 rounded-lg">
                 <p className="text-sm">
-                  🎉 <strong>Bonus:</strong> You'll get 1 million balance for becoming a carowner!
+                  🎉 <strong>Bonus:</strong> You'll get 1 million balance for becoming a car owner!
                 </p>
               </div>
 
               <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+                {/* Profile Picture Upload - Updated to match CreateCustomerModal */}
+                <div>
+                  <label className="block text-gray-700 mb-2">Profile Picture</label>
+                  <div className="flex items-center gap-4">
+                    <div 
+                      onClick={() => !loading && fileInputRef.current.click()}
+                      className={`w-20 h-20 rounded-full border-2 border-dashed border-gray-300 flex items-center justify-center cursor-pointer hover:border-blue-400 transition-colors overflow-hidden ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    >
+                      {previewImage ? (
+                        <img 
+                          src={previewImage} 
+                          alt="Profile preview" 
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <PhotoIcon className="w-8 h-8 text-gray-400" />
+                      )}
+                    </div>
+                    <div className="flex-1">
+                      <button
+                        type="button"
+                        onClick={() => !loading && fileInputRef.current.click()}
+                        disabled={loading}
+                        className="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {formData.profile_pic ? "Change Photo" : "Upload Photo"}
+                      </button>
+                      <p className="text-xs text-gray-500 mt-1">
+                        JPEG or PNG (max 5MB)
+                      </p>
+                    </div>
+                    <input
+                      type="file"
+                      ref={fileInputRef}
+                      onChange={handleFileChange}
+                      accept="image/*"
+                      className="hidden"
+                      required
+                      disabled={loading}
+                    />
+                  </div>
+                </div>
+
                 {/* Combined Dial Code and Phone Number Field */}
                 <div>
                   <label className="block text-gray-700 mb-2">Phone Number</label>
                   <div className="flex gap-2 items-center">
-                    {/* Dial Code Dropdown */}
                     <DialCodeSelector
                       selectedCode={formData.dial_code}
                       onChange={(selected) =>
@@ -297,44 +407,29 @@ const CreateCarOwnerModal = ({ isOpen, closeModal, onCreateSuccess, setNotificat
                       }
                     />
 
-                    {/* Phone Number Input */}
                     <input
                       type="text"
                       name="phone_number"
                       value={formData.phone_number}
                       onChange={handleChange}
-                      className="w-2/3 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-400 outline-none"
+                      disabled={loading}
+                      className="w-2/3 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-400 outline-none disabled:opacity-50"
                       placeholder="Enter phone number"
                       required
-                      maxLength={10} // Limit input to 10 digits
+                      maxLength={10}
                     />
                   </div>
                 </div>
 
-                  {/* Profile Picture Field */}
-                  <div>
-                    <label className="block text-gray-700 mb-2">Profile Picture</label>
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={handleFileChange}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-400 outline-none"
-                      required
-                    />
-                  </div>
-
-                {error && (
-                  <p className="text-red-500 text-sm text-center">{error}</p>
-                )}
-
+                {/* Buttons */}
                 <div className="flex justify-end gap-4 mt-6">
                   <button
                     type="button"
-                    onClick={() => {
-                      setError("");
-                      closeModal();
-                    }}
-                    className="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition-all"
+                    onClick={closeModal}
+                    disabled={loading}
+                    className={`px-4 py-2 ${
+                      loading ? "bg-gray-200" : "bg-gray-300"
+                    } text-gray-700 rounded-lg hover:bg-gray-400 transition-all disabled:opacity-50`}
                   >
                     Cancel
                   </button>
@@ -342,18 +437,42 @@ const CreateCarOwnerModal = ({ isOpen, closeModal, onCreateSuccess, setNotificat
                   <button
                     type="submit"
                     disabled={loading}
-                    className={`px-6 py-2 text-white rounded-lg transition-all ${
-                      loading
-                        ? "bg-blue-400 cursor-not-allowed"
-                        : "bg-blue-600 hover:bg-blue-700"
-                    }`}
+                    className={`px-6 py-2 ${
+                      loading ? "bg-blue-700" : "bg-blue-600"
+                    } text-white rounded-lg hover:bg-blue-700 transition-all flex items-center justify-center min-w-[100px] disabled:opacity-50`}
                   >
-                    {loading ? "Submitting..." : "Become Car Owner"}
+                    {loading ? (
+                      <>
+                        <svg
+                          className="animate-spin -ml-1 mr-2 h-4 w-4 text-white"
+                          xmlns="http://www.w3.org/2000/svg"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                        >
+                          <circle
+                            className="opacity-25"
+                            cx="12"
+                            cy="12"
+                            r="10"
+                            stroke="currentColor"
+                            strokeWidth="4"
+                          ></circle>
+                          <path
+                            className="opacity-75"
+                            fill="currentColor"
+                            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                          ></path>
+                        </svg>
+                        Registering...
+                      </>
+                    ) : (
+                      "Become Car Owner"
+                    )}
                   </button>
                 </div>
               </form>
             </motion.div>
-          </motion.div>
+          </div>
         )}
       </AnimatePresence>
 

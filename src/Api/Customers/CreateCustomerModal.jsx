@@ -1,11 +1,11 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import axios from "axios";
 import { jwtDecode } from "jwt-decode";
-import { motion, AnimatePresence } from "framer-motion";
 import { BACKEND_URL } from "../../Constants/constant";
-import { CheckCircleIcon, ChevronDownIcon, PhotoIcon } from "@heroicons/react/24/solid";
+import { CheckCircleIcon, ChevronDownIcon, PhotoIcon, XMarkIcon } from "@heroicons/react/24/solid";
+import ResponseHandler from "../../Components/Globle/ResponseHandler";
 
-// Reuse the same DIAL_CODES array from CreateCarOwnerModal
 const DIAL_CODES = [
   { code: "+1", country: "USA", flag: "🇺🇸" },
   { code: "+91", country: "India", flag: "🇮🇳" },
@@ -19,7 +19,6 @@ const DIAL_CODES = [
   { code: "+52", country: "Mexico", flag: "🇲🇽" },
 ];
 
-// Reuse the same DialCodeSelector component
 const DialCodeSelector = ({ selectedCode, onChange }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [search, setSearch] = useState("");
@@ -85,7 +84,7 @@ const DialCodeSelector = ({ selectedCode, onChange }) => {
   );
 };
 
-const CreateCustomerModal = ({ isOpen, closeModal, onCreateSuccess, setNotification }) => {
+const CreateCustomerModal = ({ isOpen, closeModal, onCreateSuccess }) => {
   const [formData, setFormData] = useState({
     dial_code: DIAL_CODES[1], // Default to India (+91)
     phone_number: "",
@@ -93,19 +92,26 @@ const CreateCustomerModal = ({ isOpen, closeModal, onCreateSuccess, setNotificat
   });
   const [previewImage, setPreviewImage] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [userId, setUserId] = useState("");
+  const [notification, setNotification] = useState({
+    type: null,
+    message: null,
+    details: null
+  });
 
   const modalRef = useRef(null);
   const successModalRef = useRef(null);
   const fileInputRef = useRef(null);
 
-  // Get user id from token on mount
   useEffect(() => {
     const authToken = localStorage.getItem("authToken");
     if (!authToken) {
-      setError("❌ Unauthorized! Please log in.");
+      setNotification({
+        type: 'error',
+        message: 'Unauthorized',
+        details: 'Please log in to continue'
+      });
       return;
     }
 
@@ -116,23 +122,36 @@ const CreateCustomerModal = ({ isOpen, closeModal, onCreateSuccess, setNotificat
       if (userIdFromToken) {
         setUserId(userIdFromToken);
       } else {
-        setError("❌ User ID missing in token.");
+        setNotification({
+          type: 'error',
+          message: 'Authentication error',
+          details: 'User ID missing in token'
+        });
       }
     } catch (error) {
       console.error("JWT Decode Error:", error);
-      setError("❌ Invalid token.");
+      setNotification({
+        type: 'error',
+        message: 'Invalid token',
+        details: 'Please log in again'
+      });
     }
   }, []);
+
+  const clearNotification = () => {
+    setNotification({
+      type: null,
+      message: null,
+      details: null
+    });
+  };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
 
     if (name === "phone_number") {
-      // Allow only numeric input and limit to 10 digits
       const numericValue = value.replace(/\D/g, "").slice(0, 10);
       setFormData((prev) => ({ ...prev, [name]: numericValue }));
-    } else {
-      setFormData((prev) => ({ ...prev, [name]: value }));
     }
   };
 
@@ -140,21 +159,27 @@ const CreateCustomerModal = ({ isOpen, closeModal, onCreateSuccess, setNotificat
     const file = e.target.files[0];
     if (!file) return;
 
-    // Validate file type
     if (!file.type.match('image.*')) {
-      setError("❌ Please select an image file (JPEG, PNG)");
+      setNotification({
+        type: 'error',
+        message: 'Invalid file type',
+        details: 'Please select an image file (JPEG, PNG)'
+      });
       return;
     }
 
-    // Validate file size (max 5MB)
     if (file.size > 5 * 1024 * 1024) {
-      setError("❌ Image size should be less than 5MB");
+      setNotification({
+        type: 'error',
+        message: 'File too large',
+        details: 'Image size should be less than 5MB'
+      });
       return;
     }
 
     setFormData((prev) => ({ ...prev, profile_pic: file }));
+    clearNotification();
 
-    // Create preview
     const reader = new FileReader();
     reader.onloadend = () => {
       setPreviewImage(reader.result);
@@ -164,25 +189,30 @@ const CreateCustomerModal = ({ isOpen, closeModal, onCreateSuccess, setNotificat
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setLoading(true);
+    clearNotification();
 
     if (!userId) {
-      setError("❌ User not authenticated.");
+      setNotification({
+        type: 'error',
+        message: 'Authentication required',
+        details: 'Please log in to continue'
+      });
+      setLoading(false);
       return;
     }
 
-    // Validate phone number field
     if (formData.phone_number.length !== 10) {
-      setError("❌ Phone number must be exactly 10 digits.");
+      setNotification({
+        type: 'error',
+        message: 'Invalid phone number',
+        details: 'Phone number must be exactly 10 digits'
+      });
+      setLoading(false);
       return;
     }
-
-    setLoading(true);
-    setError("");
-
-    const authToken = localStorage.getItem("authToken");
 
     try {
-      // Create FormData for file upload
       const formDataToSend = new FormData();
       formDataToSend.append("user", userId);
       formDataToSend.append("dial_code", formData.dial_code.code);
@@ -196,13 +226,18 @@ const CreateCustomerModal = ({ isOpen, closeModal, onCreateSuccess, setNotificat
         formDataToSend,
         {
           headers: {
-            Authorization: `Bearer ${authToken}`,
+            Authorization: `Bearer ${localStorage.getItem("authToken")}`,
             "Content-Type": "multipart/form-data",
           },
         }
       );
 
-      // Reset form data
+      setNotification({
+        type: 'success',
+        message: 'Registration successful!',
+        details: 'You are now a registered customer'
+      });
+
       setFormData({ 
         dial_code: DIAL_CODES[1], 
         phone_number: "",
@@ -210,40 +245,42 @@ const CreateCustomerModal = ({ isOpen, closeModal, onCreateSuccess, setNotificat
       });
       setPreviewImage(null);
 
-      // Show success modal
       setShowSuccessModal(true);
-
-      // Notify parent component
-      if (setNotification) {
-        setNotification({
-          message: "Congratulations! You are now a customer. 🎉",
-          type: "success",
-        });
-
-        setTimeout(() => {
-          setNotification({ message: "", type: "" });
-        }, 5000);
-      }
-
+      
       if (onCreateSuccess) {
         onCreateSuccess(response.data);
       }
-    } catch (error) {
-      console.error("❌ Error creating customer:", error);
 
+      setTimeout(() => {
+        closeModal();
+      }, 1500);
+    } catch (error) {
+      console.error("Error creating customer:", error);
+      
+      let errorMessage = "Registration failed";
+      let errorDetails = "Please try again";
+      
       if (error.response) {
-        const { data } = error.response;
-        if (data && typeof data === "object") {
-          const errorMessages = Object.values(data).flat().join(" ");
-          setError(errorMessages);
-        } else if (typeof data === "string") {
-          setError(data);
+        if (error.response.data) {
+          errorDetails = typeof error.response.data === 'object' 
+            ? Object.entries(error.response.data).map(([field, messages]) => (
+                <div key={field}>
+                  <strong>{field}:</strong> {Array.isArray(messages) ? messages.join(" ") : messages}
+                </div>
+              ))
+            : error.response.data;
         } else {
-          setError("An error occurred. Please try again.");
+          errorDetails = error.response.statusText || "Unknown error occurred";
         }
-      } else {
-        setError("Network error. Please check your connection.");
+      } else if (error.message) {
+        errorDetails = error.message;
       }
+
+      setNotification({
+        type: 'error',
+        message: errorMessage,
+        details: errorDetails
+      });
     } finally {
       setLoading(false);
     }
@@ -254,27 +291,17 @@ const CreateCustomerModal = ({ isOpen, closeModal, onCreateSuccess, setNotificat
     closeModal();
   };
 
-  // Handle clicking outside the modal
   useEffect(() => {
     const handleClickOutside = (event) => {
-      if (
-        modalRef.current &&
-        !modalRef.current.contains(event.target) &&
-        isOpen
-      ) {
+      if (modalRef.current && !modalRef.current.contains(event.target) && isOpen) {
         closeModal();
       }
-      if (
-        successModalRef.current &&
-        !successModalRef.current.contains(event.target) &&
-        showSuccessModal
-      ) {
+      if (successModalRef.current && !successModalRef.current.contains(event.target) && showSuccessModal) {
         handleSuccessClose();
       }
     };
 
     document.addEventListener("mousedown", handleClickOutside);
-
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
@@ -285,24 +312,30 @@ const CreateCustomerModal = ({ isOpen, closeModal, onCreateSuccess, setNotificat
       {/* MAIN FORM MODAL */}
       <AnimatePresence>
         {isOpen && (
-          <motion.div
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-          >
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
             <motion.div
               ref={modalRef}
-              className="bg-white rounded-2xl shadow-xl p-8 w-full max-w-md relative"
               initial={{ scale: 0.8, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.8, opacity: 0 }}
+              className="bg-white rounded-2xl shadow-xl p-8 w-full max-w-md relative"
             >
+              <button
+                onClick={closeModal}
+                disabled={loading}
+                className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition disabled:opacity-50"
+              >
+                <XMarkIcon className="h-6 w-6" />
+              </button>
 
+              <h2 className="text-2xl font-bold mb-6 text-blue-700">Register as Customer</h2>
 
-              <h2 className="text-2xl font-bold text-blue-700 mb-6 text-center">
-                Register as Customer
-              </h2>
+              <ResponseHandler
+                type={notification.type}
+                message={notification.message}
+                details={notification.details}
+                onClear={clearNotification}
+              />
 
               {/* Bonus Message */}
               <div className="bg-blue-100 border-l-4 border-blue-500 text-blue-700 p-4 mb-6 rounded-lg">
@@ -317,8 +350,8 @@ const CreateCustomerModal = ({ isOpen, closeModal, onCreateSuccess, setNotificat
                   <label className="block text-gray-700 mb-2">Profile Picture (Optional)</label>
                   <div className="flex items-center gap-4">
                     <div 
-                      onClick={() => fileInputRef.current.click()}
-                      className="w-20 h-20 rounded-full border-2 border-dashed border-gray-300 flex items-center justify-center cursor-pointer hover:border-blue-400 transition-colors overflow-hidden"
+                      onClick={() => !loading && fileInputRef.current.click()}
+                      className={`w-20 h-20 rounded-full border-2 border-dashed border-gray-300 flex items-center justify-center cursor-pointer hover:border-blue-400 transition-colors overflow-hidden ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
                     >
                       {previewImage ? (
                         <img 
@@ -333,8 +366,9 @@ const CreateCustomerModal = ({ isOpen, closeModal, onCreateSuccess, setNotificat
                     <div className="flex-1">
                       <button
                         type="button"
-                        onClick={() => fileInputRef.current.click()}
-                        className="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm transition-colors"
+                        onClick={() => !loading && fileInputRef.current.click()}
+                        disabled={loading}
+                        className="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         {formData.profile_pic ? "Change Photo" : "Upload Photo"}
                       </button>
@@ -348,6 +382,7 @@ const CreateCustomerModal = ({ isOpen, closeModal, onCreateSuccess, setNotificat
                       onChange={handleFileChange}
                       accept="image/*"
                       className="hidden"
+                      disabled={loading}
                     />
                   </div>
                 </div>
@@ -368,7 +403,8 @@ const CreateCustomerModal = ({ isOpen, closeModal, onCreateSuccess, setNotificat
                       name="phone_number"
                       value={formData.phone_number}
                       onChange={handleChange}
-                      className="w-2/3 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-400 outline-none"
+                      disabled={loading}
+                      className="w-2/3 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-400 outline-none disabled:opacity-50"
                       placeholder="Enter phone number"
                       required
                       maxLength={10}
@@ -376,18 +412,15 @@ const CreateCustomerModal = ({ isOpen, closeModal, onCreateSuccess, setNotificat
                   </div>
                 </div>
 
-                {error && (
-                  <p className="text-red-500 text-sm text-center">{error}</p>
-                )}
-
+                {/* Buttons */}
                 <div className="flex justify-end gap-4 mt-6">
                   <button
                     type="button"
-                    onClick={() => {
-                      setError("");
-                      closeModal();
-                    }}
-                    className="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition-all"
+                    onClick={closeModal}
+                    disabled={loading}
+                    className={`px-4 py-2 ${
+                      loading ? "bg-gray-200" : "bg-gray-300"
+                    } text-gray-700 rounded-lg hover:bg-gray-400 transition-all disabled:opacity-50`}
                   >
                     Cancel
                   </button>
@@ -395,18 +428,42 @@ const CreateCustomerModal = ({ isOpen, closeModal, onCreateSuccess, setNotificat
                   <button
                     type="submit"
                     disabled={loading}
-                    className={`px-6 py-2 text-white rounded-lg transition-all ${
-                      loading
-                        ? "bg-blue-400 cursor-not-allowed"
-                        : "bg-blue-600 hover:bg-blue-700"
-                    }`}
+                    className={`px-6 py-2 ${
+                      loading ? "bg-blue-700" : "bg-blue-600"
+                    } text-white rounded-lg hover:bg-blue-700 transition-all flex items-center justify-center min-w-[100px] disabled:opacity-50`}
                   >
-                    {loading ? "Registering..." : "Register"}
+                    {loading ? (
+                      <>
+                        <svg
+                          className="animate-spin -ml-1 mr-2 h-4 w-4 text-white"
+                          xmlns="http://www.w3.org/2000/svg"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                        >
+                          <circle
+                            className="opacity-25"
+                            cx="12"
+                            cy="12"
+                            r="10"
+                            stroke="currentColor"
+                            strokeWidth="4"
+                          ></circle>
+                          <path
+                            className="opacity-75"
+                            fill="currentColor"
+                            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                          ></path>
+                        </svg>
+                        Registering...
+                      </>
+                    ) : (
+                      "Register"
+                    )}
                   </button>
                 </div>
               </form>
             </motion.div>
-          </motion.div>
+          </div>
         )}
       </AnimatePresence>
 
