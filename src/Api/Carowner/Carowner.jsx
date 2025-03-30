@@ -57,7 +57,7 @@ const Carowners = () => {
     setCarowners((prev) => prev.filter((owner) => owner.id !== deletedId));
     setSelectedCarowner(null);
     setNotification({
-      message: "Customer deleted successfully!",
+      message: "Carowner deleted successfully!",
       type: "success",
     });
   };

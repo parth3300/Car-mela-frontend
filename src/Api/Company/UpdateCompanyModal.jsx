@@ -35,8 +35,8 @@ const UpdateCompanyModal = ({ isOpen, onClose, company, onUpdateSuccess }) => {
   useEffect(() => {
     if (company) {
       setTitle(company.title || "");
-      setCountry(company.country || "");
-      setSearchQuery(company.country || "");
+      setCountry(company.country ? company.country.slice(0, 30) : "");
+      setSearchQuery(company.country ? company.country.slice(0, 30) : "");
       setSince(company.since || "");
       
       if (company.logo) {
@@ -76,7 +76,6 @@ const UpdateCompanyModal = ({ isOpen, onClose, company, onUpdateSuccess }) => {
     const file = e.target.files[0];
     if (!file) return;
 
-    // Validate file type
     if (!file.type.match('image.*')) {
       setNotification({
         type: 'error',
@@ -86,7 +85,6 @@ const UpdateCompanyModal = ({ isOpen, onClose, company, onUpdateSuccess }) => {
       return;
     }
 
-    // Validate file size (max 5MB)
     if (file.size > 5 * 1024 * 1024) {
       setNotification({
         type: 'error',
@@ -99,7 +97,6 @@ const UpdateCompanyModal = ({ isOpen, onClose, company, onUpdateSuccess }) => {
     setLogo(file);
     clearNotification();
 
-    // Create preview
     const reader = new FileReader();
     reader.onloadend = () => {
       setPreviewImage(reader.result);
@@ -109,12 +106,13 @@ const UpdateCompanyModal = ({ isOpen, onClose, company, onUpdateSuccess }) => {
 
   const handleCountrySearch = (e) => {
     const query = e.target.value;
-    setSearchQuery(query);
-    setCountry(query);
+    const limitedQuery = query.slice(0, 30);
+    setSearchQuery(limitedQuery);
+    setCountry(limitedQuery);
 
-    if (query) {
+    if (limitedQuery) {
       const filtered = allCountries.filter((country) =>
-        country.name.toLowerCase().includes(query.toLowerCase())
+        country.name.toLowerCase().includes(limitedQuery.toLowerCase())
       );
       setFilteredCountries(filtered);
       setShowDropdown(true);
@@ -125,8 +123,9 @@ const UpdateCompanyModal = ({ isOpen, onClose, company, onUpdateSuccess }) => {
   };
 
   const handleCountrySelect = (country) => {
-    setCountry(country.name);
-    setSearchQuery(country.name);
+    const limitedCountryName = country.name.slice(0, 30);
+    setCountry(limitedCountryName);
+    setSearchQuery(limitedCountryName);
     setShowDropdown(false);
   };
 
@@ -134,15 +133,12 @@ const UpdateCompanyModal = ({ isOpen, onClose, company, onUpdateSuccess }) => {
     if (e.key === "Enter" && filteredCountries.length > 0) {
       e.preventDefault();
       const firstCountry = filteredCountries[0];
-      setCountry(firstCountry.name);
-      setSearchQuery(firstCountry.name);
-      setShowDropdown(false);
+      handleCountrySelect(firstCountry);
     }
   };
 
   const handleYearChange = (e) => {
     const value = e.target.value;
-    // Only allow numbers and limit to 4 digits
     if (/^\d{0,4}$/.test(value)) {
       setSince(value);
     }
@@ -177,10 +173,12 @@ const UpdateCompanyModal = ({ isOpen, onClose, company, onUpdateSuccess }) => {
         details: null
       });
 
+      // Don't reset loading state here - keep it true until modal closes
+      onUpdateSuccess(response.data);
+      
+      // Close modal after success
       setTimeout(() => {
-        onUpdateSuccess(response.data);
         onClose();
-        setLoading(false); // Reset loading state after closing
       }, 1500);
     } catch (error) {
       console.error("Error updating company:", error);
@@ -209,9 +207,18 @@ const UpdateCompanyModal = ({ isOpen, onClose, company, onUpdateSuccess }) => {
         message: errorMessage,
         details: errorDetails
       });
-      setLoading(false); // Reset loading state on error
+      
+      // Only reset loading state on error
+      setLoading(false);
     }
   };
+
+  // Reset loading state when modal closes
+  useEffect(() => {
+    if (!isOpen) {
+      setLoading(false);
+    }
+  }, [isOpen]);
 
   return (
     <AnimatePresence>
@@ -307,10 +314,14 @@ const UpdateCompanyModal = ({ isOpen, onClose, company, onUpdateSuccess }) => {
                   onKeyDown={handleKeyDown}
                   onClick={() => !loading && setShowDropdown(true)}
                   required
+                  maxLength={30}
                   disabled={loading}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-400 outline-none disabled:opacity-50"
                   placeholder="Search for a country"
                 />
+                <div className="absolute right-2 top-10 text-xs text-gray-400">
+                  {searchQuery.length}/30
+                </div>
                 {showDropdown && !loading && (
                   <div
                     ref={dropdownRef}
@@ -323,7 +334,7 @@ const UpdateCompanyModal = ({ isOpen, onClose, company, onUpdateSuccess }) => {
                           onClick={() => handleCountrySelect(country)}
                           className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
                         >
-                          {country.name}
+                          {country.name.slice(0, 30)}
                         </div>
                       ))
                     ) : (
@@ -366,9 +377,9 @@ const UpdateCompanyModal = ({ isOpen, onClose, company, onUpdateSuccess }) => {
                 <button
                   type="submit"
                   disabled={loading}
-                  className={`px-6 py-2 ${
-                    loading ? "bg-blue-700" : "bg-blue-600"
-                  } text-white rounded-lg hover:bg-blue-700 transition-all flex items-center justify-center min-w-[100px] disabled:opacity-50`}
+                  className={`px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all flex items-center justify-center min-w-[100px] ${
+                    loading ? "bg-blue-700 cursor-wait" : ""
+                  }`}
                 >
                   {loading ? (
                     <>

@@ -3,7 +3,7 @@ import axios from "axios";
 import { jwtDecode } from "jwt-decode";
 import { motion, AnimatePresence } from "framer-motion";
 import { BACKEND_URL } from "../../Constants/constant";
-import { XMarkIcon, CheckCircleIcon, ChevronDownIcon } from "@heroicons/react/24/solid";
+import { CheckCircleIcon, ChevronDownIcon } from "@heroicons/react/24/solid";
 
 // Updated DIAL_CODES array with flag emojis
 const DIAL_CODES = [
@@ -285,13 +285,6 @@ const UpdateCarOwnerModal = ({ isOpen, closeModal, carowner, onUpdateSuccess, se
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.8, opacity: 0 }}
             >
-              {/* Close Button */}
-              <button
-                onClick={closeModal}
-                className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition"
-              >
-                <XMarkIcon className="h-6 w-6" />
-              </button>
 
               <h2 className="text-2xl font-bold text-blue-700 mb-6 text-center">
                 Update Car Owner
@@ -354,20 +347,55 @@ const UpdateCarOwnerModal = ({ isOpen, closeModal, carowner, onUpdateSuccess, se
                   <p className="text-red-500 text-sm text-center">{error}</p>
                 )}
 
-                <div className="flex justify-end gap-4 mt-6">
-                  {/* Submit Button */}
-                  <button
-                    type="submit"
-                    disabled={loading}
-                    className={`w-full p-2 rounded-md text-white transition ${
-                      loading
-                        ? "bg-gray-400 cursor-not-allowed"
-                        : "bg-blue-600 hover:bg-blue-700"
-                    }`}
-                  >
-                    {loading ? "Updating..." : "Update Carowner"}
-                  </button>
-                </div>
+              {/* Buttons */}
+              <div className="flex justify-end gap-4 mt-6">
+                <button
+                  type="button"
+                  onClick={closeModal}
+                  disabled={loading}
+                  className={`px-4 py-2 ${
+                    loading ? "bg-gray-200" : "bg-gray-300"
+                  } text-gray-700 rounded-lg hover:bg-gray-400 transition-all disabled:opacity-50`}
+                >
+                  Cancel
+                </button>
+
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className={`px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all flex items-center justify-center min-w-[100px] ${
+                    loading ? "bg-blue-700 cursor-wait" : ""
+                  }`}
+                >
+                  {loading ? (
+                    <>
+                      <svg
+                        className="animate-spin -ml-1 mr-2 h-4 w-4 text-white"
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                      >
+                        <circle
+                          className="opacity-25"
+                          cx="12"
+                          cy="12"
+                          r="10"
+                          stroke="currentColor"
+                          strokeWidth="4"
+                        ></circle>
+                        <path
+                          className="opacity-75"
+                          fill="currentColor"
+                          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                        ></path>
+                      </svg>
+                      Updating...
+                    </>
+                  ) : (
+                    "Update"
+                  )}
+                </button>
+              </div>
               </form>
             </motion.div>
           </motion.div>

@@ -3,7 +3,7 @@ import axios from "axios";
 import { jwtDecode } from "jwt-decode";
 import { motion, AnimatePresence } from "framer-motion";
 import { BACKEND_URL } from "../../Constants/constant";
-import { XMarkIcon, CheckCircleIcon, ChevronDownIcon } from "@heroicons/react/24/solid";
+import { CheckCircleIcon, ChevronDownIcon } from "@heroicons/react/24/solid";
 
 // Updated DIAL_CODES array with flag emojis (optional but nice UX)
 const DIAL_CODES = [
@@ -272,16 +272,6 @@ const CreateCarOwnerModal = ({ isOpen, closeModal, onCreateSuccess, setNotificat
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.8, opacity: 0 }}
             >
-              {/* ❌ Close Button */}
-              <button
-                onClick={() => {
-                  setError("");
-                  closeModal();
-                }}
-                className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition"
-              >
-                <XMarkIcon className="h-6 w-6" />
-              </button>
 
               <h2 className="text-2xl font-bold text-blue-700 mb-6 text-center">
                 Become Car Owner

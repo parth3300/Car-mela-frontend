@@ -52,7 +52,7 @@ const CreateCompanyModal = ({ onClose, onCreated }) => {
       const formData = new FormData();
       formData.append("title", title);
       if (logo) formData.append("logo", logo);
-      formData.append("country", country);
+      formData.append("country", country); // Already limited to 30 chars
       formData.append("since", since);
 
       await axios.post(`${BACKEND_URL}/store/companies/`, formData, {
@@ -91,13 +91,11 @@ const CreateCompanyModal = ({ onClose, onCreated }) => {
     const file = e.target.files[0];
     if (!file) return;
 
-    // Validate file type
     if (!file.type.match('image.*')) {
       setError("Please select an image file (JPEG, PNG)");
       return;
     }
 
-    // Validate file size (max 5MB)
     if (file.size > 5 * 1024 * 1024) {
       setError("Image size should be less than 5MB");
       return;
@@ -106,7 +104,6 @@ const CreateCompanyModal = ({ onClose, onCreated }) => {
     setLogo(file);
     setError(null);
 
-    // Create preview
     const reader = new FileReader();
     reader.onloadend = () => {
       setPreviewImage(reader.result);
@@ -116,12 +113,14 @@ const CreateCompanyModal = ({ onClose, onCreated }) => {
 
   const handleCountrySearch = (e) => {
     const query = e.target.value;
-    setSearchQuery(query);
-    setCountry(query);
+    // Limit input to 30 characters
+    const limitedQuery = query.slice(0, 30);
+    setSearchQuery(limitedQuery);
+    setCountry(limitedQuery);
 
-    if (query) {
+    if (limitedQuery) {
       const filtered = allCountries.filter((country) =>
-        country.name.toLowerCase().includes(query.toLowerCase())
+        country.name.toLowerCase().includes(limitedQuery.toLowerCase())
       );
       setFilteredCountries(filtered);
       setShowDropdown(true);
@@ -132,8 +131,10 @@ const CreateCompanyModal = ({ onClose, onCreated }) => {
   };
 
   const handleCountrySelect = (country) => {
-    setCountry(country.name);
-    setSearchQuery(country.name);
+    // Ensure selected country name doesn't exceed 30 chars
+    const limitedCountryName = country.name.slice(0, 30);
+    setCountry(limitedCountryName);
+    setSearchQuery(limitedCountryName);
     setShowDropdown(false);
   };
 
@@ -141,15 +142,12 @@ const CreateCompanyModal = ({ onClose, onCreated }) => {
     if (e.key === "Enter" && filteredCountries.length > 0) {
       e.preventDefault();
       const firstCountry = filteredCountries[0];
-      setCountry(firstCountry.name);
-      setSearchQuery(firstCountry.name);
-      setShowDropdown(false);
+      handleCountrySelect(firstCountry);
     }
   };
 
   const handleYearChange = (e) => {
     const value = e.target.value;
-    // Only allow numbers and limit to 4 digits
     if (/^\d{0,4}$/.test(value)) {
       setSince(value);
     }
@@ -181,7 +179,8 @@ const CreateCompanyModal = ({ onClose, onCreated }) => {
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               required
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-400 outline-none"
+              disabled={loading}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-400 outline-none disabled:opacity-50"
             />
           </div>
 
@@ -190,8 +189,8 @@ const CreateCompanyModal = ({ onClose, onCreated }) => {
             <label className="block text-gray-700 mb-2">Company Logo</label>
             <div className="flex items-center gap-4">
               <div 
-                onClick={() => fileInputRef.current.click()}
-                className="w-20 h-20 rounded-lg border-2 border-dashed border-gray-300 flex items-center justify-center cursor-pointer hover:border-blue-400 transition-colors overflow-hidden"
+                onClick={() => !loading && fileInputRef.current.click()}
+                className={`w-20 h-20 rounded-lg border-2 border-dashed border-gray-300 flex items-center justify-center cursor-pointer hover:border-blue-400 transition-colors overflow-hidden ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
               >
                 {previewImage ? (
                   <img 
@@ -206,8 +205,9 @@ const CreateCompanyModal = ({ onClose, onCreated }) => {
               <div className="flex-1">
                 <button
                   type="button"
-                  onClick={() => fileInputRef.current.click()}
-                  className="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm transition-colors"
+                  onClick={() => !loading && fileInputRef.current.click()}
+                  disabled={loading}
+                  className="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {logo ? "Change Logo" : "Upload Logo"}
                 </button>
@@ -222,6 +222,7 @@ const CreateCompanyModal = ({ onClose, onCreated }) => {
                 accept="image/*"
                 className="hidden"
                 required
+                disabled={loading}
               />
             </div>
           </div>
@@ -234,12 +235,17 @@ const CreateCompanyModal = ({ onClose, onCreated }) => {
               value={searchQuery}
               onChange={handleCountrySearch}
               onKeyDown={handleKeyDown}
-              onClick={() => setShowDropdown(true)}
+              onClick={() => !loading && setShowDropdown(true)}
               required
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-400 outline-none"
+              maxLength={30}
+              disabled={loading}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-400 outline-none disabled:opacity-50"
               placeholder="Search for a country"
             />
-            {showDropdown && (
+            <div className="absolute right-2 top-10 text-xs text-gray-400">
+              {searchQuery.length}/30
+            </div>
+            {showDropdown && !loading && (
               <div
                 ref={dropdownRef}
                 className="absolute z-10 mt-1 w-full max-h-48 overflow-y-auto border border-gray-300 rounded-lg bg-white shadow-lg"
@@ -251,7 +257,7 @@ const CreateCompanyModal = ({ onClose, onCreated }) => {
                       onClick={() => handleCountrySelect(country)}
                       className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
                     >
-                      {country.name}
+                      {country.name.slice(0, 30)}
                     </div>
                   ))
                 ) : (
@@ -272,7 +278,8 @@ const CreateCompanyModal = ({ onClose, onCreated }) => {
               maxLength={4}
               pattern="\d{4}"
               inputMode="numeric"
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-400 outline-none"
+              disabled={loading}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-400 outline-none disabled:opacity-50"
               placeholder="YYYY"
             />
           </div>
@@ -285,7 +292,7 @@ const CreateCompanyModal = ({ onClose, onCreated }) => {
               disabled={loading}
               className={`px-4 py-2 ${
                 loading ? "bg-gray-200" : "bg-gray-300"
-              } text-gray-700 rounded-lg hover:bg-gray-400 transition-all`}
+              } text-gray-700 rounded-lg hover:bg-gray-400 transition-all disabled:opacity-50`}
             >
               Cancel
             </button>
@@ -295,7 +302,7 @@ const CreateCompanyModal = ({ onClose, onCreated }) => {
               disabled={loading}
               className={`px-6 py-2 ${
                 loading ? "bg-blue-700" : "bg-blue-600"
-              } text-white rounded-lg hover:bg-blue-700 transition-all flex items-center justify-center min-w-[100px]`}
+              } text-white rounded-lg hover:bg-blue-700 transition-all flex items-center justify-center min-w-[100px] disabled:opacity-50`}
             >
               {loading ? (
                 <>

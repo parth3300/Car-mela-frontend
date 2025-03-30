@@ -30,14 +30,14 @@ const CompanyModal = ({
       }
     };
 
-    // Attach the event listener
-    document.addEventListener("mousedown", handleClickOutside);
+    if (isOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
 
-    // Cleanup the event listener
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
-  }, [closeModal]);
+  }, [isOpen, closeModal]);
 
   if (!isOpen || !company) return null;
 
@@ -51,19 +51,16 @@ const CompanyModal = ({
     }
 
     setLoading(true);
-    console.log("Starting DELETE request...");
 
     try {
-      const url = `${BACKEND_URL}/store/companies/${company.id}/`;
-      console.log("DELETE URL:", url);
-
-      const response = await axios.delete(url, {
-        headers: {
-          Authorization: `Bearer ${authToken}`,
-        },
-      });
-
-      console.log("DELETE successful:", response.status);
+      const response = await axios.delete(
+        `${BACKEND_URL}/store/companies/${company.id}/`,
+        {
+          headers: {
+            Authorization: `Bearer ${authToken}`,
+          },
+        }
+      );
 
       setNotification({
         message: "Company successfully removed!",
@@ -76,9 +73,10 @@ const CompanyModal = ({
 
       closeModal();
     } catch (error) {
-      console.error("DELETE failed:", error.response || error);
+      console.error("DELETE failed:", error);
       setNotification({
-        message: "Failed to remove company. Please try again.",
+        message: error.response?.data?.message || 
+               "Failed to remove company. Please try again.",
         type: "error",
       });
     } finally {
@@ -92,7 +90,7 @@ const CompanyModal = ({
       {/* Modal Overlay */}
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
         <motion.div
-          ref={modalRef} // Attach the ref to the modal container
+          ref={modalRef}
           className="bg-white rounded-2xl p-8 w-full max-w-md shadow-lg relative overflow-y-auto"
           initial={{ scale: 0.8, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
@@ -102,10 +100,23 @@ const CompanyModal = ({
           {/* Close Button */}
           <button
             onClick={closeModal}
-            className="absolute top-4 right-4 text-gray-500 hover:text-gray-700 text-xl"
+            className="absolute top-4 right-4 text-gray-500 hover:text-gray-700"
             disabled={loading}
           >
-            &times;
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              className="h-6 w-6"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M6 18L18 6M6 6l12 12"
+              />
+            </svg>
           </button>
 
           {/* Company Title */}
@@ -120,6 +131,9 @@ const CompanyModal = ({
                 src={company.logo}
                 alt={company.title}
                 className="rounded-lg object-cover w-32 h-32 border shadow-md"
+                onError={(e) => {
+                  e.target.src = "https://via.placeholder.com/150?text=No+Logo";
+                }}
               />
             </div>
           )}
@@ -160,7 +174,7 @@ const CompanyModal = ({
               </button>
             ) : (
               <p className="text-sm text-gray-500 italic">
-                You can not delete this company
+                You cannot delete this company
               </p>
             )}
           </div>
@@ -188,13 +202,39 @@ const CompanyModal = ({
                   <button
                     onClick={handleDelete}
                     disabled={loading}
-                    className={`px-4 py-2 rounded-lg text-white ${
+                    className={`px-4 py-2 rounded-lg text-white flex items-center justify-center min-w-[120px] ${
                       loading
                         ? "bg-red-400 cursor-not-allowed"
                         : "bg-red-600 hover:bg-red-700"
                     } transition-all`}
                   >
-                    {loading ? "Processing..." : "Yes, Delete"}
+                    {loading ? (
+                      <div className="flex items-center">
+                        <svg
+                          className="animate-spin -ml-1 mr-2 h-4 w-4 text-white"
+                          xmlns="http://www.w3.org/2000/svg"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                        >
+                          <circle
+                            className="opacity-25"
+                            cx="12"
+                            cy="12"
+                            r="10"
+                            stroke="currentColor"
+                            strokeWidth="4"
+                          ></circle>
+                          <path
+                            className="opacity-75"
+                            fill="currentColor"
+                            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                          ></path>
+                        </svg>
+                        Deleting...
+                      </div>
+                    ) : (
+                      "Yes, Delete"
+                    )}
                   </button>
                   <button
                     onClick={() => setShowConfirm(false)}
@@ -211,13 +251,11 @@ const CompanyModal = ({
       </div>
 
       {/* Global Notification */}
-      {notification.message && (
-        <Notification
-          message={notification.message}
-          type={notification.type}
-          onClose={() => setNotification({ message: "", type: "" })}
-        />
-      )}
+      <Notification
+        message={notification.message}
+        type={notification.type}
+        onClose={() => setNotification({ message: "", type: "" })}
+      />
     </>
   );
 };
