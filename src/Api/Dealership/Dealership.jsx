@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
-import StarRating from "../../Components/StarRating";
+import StarRating from "../../components/StarRating";
 import { BACKEND_URL } from "../../Constants/constant";
 import { motion, AnimatePresence } from "framer-motion";
 import { BuildingStorefrontIcon, MapPinIcon } from "@heroicons/react/24/solid";
 import CreateDealershipModal from "./CreateDealershipModal";
 import DealershipModal from "./DealershipModal";
-import Notification from "../../Components/Globle/Notification";
-import SkeletonLoader from "../../Components/SkeletonLoader";
+import Notification from "../../components/Globle/Notification";
+import SkeletonLoader from "../../components/SkeletonLoader";
 
 const Dealership = () => {
   const [dealerships, setDealerships] = useState([]);

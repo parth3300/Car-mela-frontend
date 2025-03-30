@@ -4,7 +4,7 @@ import axios from "axios";
 import { jwtDecode } from "jwt-decode";
 import { BACKEND_URL } from "../../Constants/constant";
 import { CheckCircleIcon, ChevronDownIcon, PhotoIcon, XMarkIcon } from "@heroicons/react/24/solid";
-import ResponseHandler from "../../Components/Globle/ResponseHandler";
+import ResponseHandler from "../../components/Globle/ResponseHandler";
 
 const DIAL_CODES = [
   { code: "+1", country: "USA", flag: "🇺🇸" },

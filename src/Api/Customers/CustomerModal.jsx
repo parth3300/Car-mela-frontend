@@ -11,7 +11,7 @@ import {
 } from "@heroicons/react/24/solid";
 import { jwtDecode } from "jwt-decode";
 import { BACKEND_URL } from "../../Constants/constant";
-import Notification from "../../Components/Globle/Notification";
+import Notification from "../../components/Globle/Notification";
 
 const CustomerModal = ({
   isOpen,

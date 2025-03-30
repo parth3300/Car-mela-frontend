@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
-import StarRating from "../../Components/StarRating";
+import StarRating from "../../components/StarRating";
 import { BACKEND_URL } from "../../Constants/constant";
 import { motion, AnimatePresence } from "framer-motion";
 import { UserIcon, IdentificationIcon } from "@heroicons/react/24/solid";
@@ -9,7 +9,7 @@ import CarownerModal from "./CarownerModal";
 import UpdateCarownerModal from "./UpdateCarownerModal";
 import { PencilSquareIcon } from "@heroicons/react/24/solid"; // For edit icon
 import { jwtDecode } from "jwt-decode";
-import SkeletonLoader from "../../Components/SkeletonLoader";
+import SkeletonLoader from "../../components/SkeletonLoader";
 
 const Carowners = () => {
   const [carowners, setCarowners] = useState([]);

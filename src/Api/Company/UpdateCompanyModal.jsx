@@ -4,7 +4,7 @@ import axios from "axios";
 import { BACKEND_URL } from "../../Constants/constant";
 import { countries } from "countries-list";
 import { PhotoIcon, XMarkIcon } from "@heroicons/react/24/solid";
-import ResponseHandler from "../../Components/Globle/ResponseHandler";
+import ResponseHandler from "../../components/Globle/ResponseHandler";
 
 const UpdateCompanyModal = ({ isOpen, onClose, company, onUpdateSuccess }) => {
   const [title, setTitle] = useState("");

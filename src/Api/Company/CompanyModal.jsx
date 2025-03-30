@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import axios from "axios";
 import { motion } from "framer-motion";
 import { BACKEND_URL } from "../../Constants/constant";
-import Notification from "../../Components/Globle/Notification";
+import Notification from "../../components/Globle/Notification";
 
 const CompanyModal = ({
   isOpen,

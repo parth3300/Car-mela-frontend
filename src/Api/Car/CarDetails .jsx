@@ -7,9 +7,9 @@ import { loadStripe } from "@stripe/stripe-js";
 import { Dialog, Transition } from "@headlessui/react";
 import { Fragment } from "react";
 
-import StarRating from "../../Components/StarRating";
+import StarRating from "../../components/StarRating";
 import { BACKEND_URL, STRIPE_PUBLISHABLE_KEY } from "../../Constants/constant";
-import Notification from "../../Components/Globle/Notification";
+import Notification from "../../components/Globle/Notification";
 import CreateCarOwnerModal from "../Carowner/CreateCarownerModal";
 
 

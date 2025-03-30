@@ -5,10 +5,10 @@ import CompanyModal from "./CompanyModal";
 import CreateCompanyModal from "./CreateCompanyModal";
 import { BACKEND_URL } from "../../Constants/constant";
 import { motion, AnimatePresence } from "framer-motion";
-import ResponseHandler from "../../Components/Globle/ResponseHandler";
+import ResponseHandler from "../../components/Globle/ResponseHandler";
 import UpdateCompanyModal from "./UpdateCompanyModal";
 import { PencilSquareIcon } from "@heroicons/react/24/solid";
-import SkeletonLoader from "../../Components/SkeletonLoader";
+import SkeletonLoader from "../../components/SkeletonLoader";
 
 const Company = () => {
   const [companies, setCompanies] = useState([]);

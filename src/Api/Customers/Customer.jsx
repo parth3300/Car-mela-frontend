@@ -8,7 +8,7 @@ import CustomerModal from "./CustomerModal";
 import UpdateCustomerModal from "./UpdateCustomerModal";
 import { PencilSquareIcon } from "@heroicons/react/24/solid";
 import { jwtDecode } from "jwt-decode";
-import SkeletonLoader from "../../Components/SkeletonLoader";
+import SkeletonLoader from "../../components/SkeletonLoader";
 
 const Customers = () => {
   const [customers, setCustomers] = useState([]);

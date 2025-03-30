@@ -4,11 +4,11 @@ import axios from "axios";
 import { jwtDecode } from "jwt-decode";
 import { BACKEND_URL } from "../../Constants/constant";
 import { CheckCircleIcon, ChevronDownIcon, PhotoIcon, XMarkIcon } from "@heroicons/react/24/solid";
-import ResponseHandler from "../../Components/Globle/ResponseHandler";
+import ResponseHandler from "../../components/Globle/ResponseHandler";
 
 const DIAL_CODES = [
-  { code: "+1", country: "USA", flag: "🇺🇸" },
   { code: "+91", country: "India", flag: "🇮🇳" },
+  { code: "+1", country: "USA", flag: "🇺🇸" },
   { code: "+44", country: "UK", flag: "🇬🇧" },
   { code: "+61", country: "Australia", flag: "🇦🇺" },
   { code: "+81", country: "Japan", flag: "🇯🇵" },
