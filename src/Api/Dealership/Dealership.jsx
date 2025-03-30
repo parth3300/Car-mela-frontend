@@ -3,7 +3,7 @@ import axios from "axios";
 import StarRating from "../../components/StarRating";
 import { BACKEND_URL } from "../../Constants/constant";
 import { motion, AnimatePresence } from "framer-motion";
-import { BuildingStorefrontIcon, MapPinIcon } from "@heroicons/react/24/solid";
+import { MapPinIcon } from "@heroicons/react/24/solid";
 import CreateDealershipModal from "./CreateDealershipModal";
 import DealershipModal from "./DealershipModal";
 import Notification from "../../components/Globle/Notification";
@@ -20,6 +20,7 @@ const Dealership = () => {
     type: "",
   });
   const [processing, setProcessing] = useState(false);
+  const [deletingId, setDeletingId] = useState(null); // Track which dealership is being deleted
 
   const authToken = localStorage.getItem("authToken");
 
@@ -60,6 +61,33 @@ const Dealership = () => {
       });
     } finally {
       setProcessing(false);
+    }
+  };
+
+  const handleDeleteDealership = async (id) => {
+    setDeletingId(id);
+    try {
+      await axios.delete(`${BACKEND_URL}/store/dealerships/${id}/`, {
+        headers: {
+          Authorization: `Bearer ${authToken}`,
+        },
+      });
+      setDealerships((prev) => prev.filter((d) => d.id !== id));
+      setNotification({
+        message: "Dealership deleted successfully!",
+        type: "success",
+      });
+      if (selectedDealership?.id === id) {
+        setSelectedDealership(null);
+      }
+    } catch (error) {
+      console.error("Error deleting dealership:", error);
+      setNotification({
+        message: "Failed to delete dealership. Please try again.",
+        type: "error",
+      });
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -236,10 +264,8 @@ const Dealership = () => {
             isOpen={!!selectedDealership}
             dealership={selectedDealership}
             closeModal={() => setSelectedDealership(null)}
-            onDeleteSuccess={(deletedId) => {
-              setDealerships((prev) => prev.filter((d) => d.id !== deletedId));
-              setSelectedDealership(null);
-            }}
+            onDeleteSuccess={handleDeleteDealership}
+            isDeleting={deletingId === selectedDealership.id}
           />
         )}
       </AnimatePresence>

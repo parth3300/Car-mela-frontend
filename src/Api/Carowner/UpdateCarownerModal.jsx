@@ -3,12 +3,11 @@ import axios from "axios";
 import { jwtDecode } from "jwt-decode";
 import { motion, AnimatePresence } from "framer-motion";
 import { BACKEND_URL } from "../../Constants/constant";
-import { CheckCircleIcon, ChevronDownIcon } from "@heroicons/react/24/solid";
+import { CheckCircleIcon, ChevronDownIcon, XMarkIcon, PhotoIcon, ArrowPathIcon } from "@heroicons/react/24/solid";
 
-// Updated DIAL_CODES array with flag emojis
 const DIAL_CODES = [
+  { code: "+91", country: "India", flag: "🇮🇳🇩" },
   { code: "+1", country: "USA", flag: "🇺🇸" },
-  { code: "+91", country: "India", flag: "🇮🇳" },
   { code: "+44", country: "UK", flag: "🇬🇧" },
   { code: "+61", country: "Australia", flag: "🇦🇺" },
   { code: "+81", country: "Japan", flag: "🇯🇵" },
@@ -19,10 +18,10 @@ const DIAL_CODES = [
   { code: "+52", country: "Mexico", flag: "🇲🇽" },
 ];
 
-// DialCodeSelector Component
 const DialCodeSelector = ({ selectedCode, onChange }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [search, setSearch] = useState("");
+  const dropdownRef = useRef(null);
 
   const filteredDialCodes = DIAL_CODES.filter(
     (dial) =>
@@ -30,55 +29,102 @@ const DialCodeSelector = ({ selectedCode, onChange }) => {
       dial.code.includes(search)
   );
 
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setIsOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
+
   return (
-    <div className="relative w-1/3">
+    <div className="relative w-1/2">
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full px-4 py-2 border border-gray-300 rounded-lg flex items-center justify-between focus:ring-2 focus:ring-blue-400 bg-white"
+        className="w-full px-3 py-2 border border-gray-300 rounded-lg flex items-center justify-between focus:ring-2 focus:ring-blue-400 bg-white hover:bg-gray-50 transition-colors"
       >
-        <span>
-          {selectedCode.flag} {selectedCode.code}
-        </span>
-        <ChevronDownIcon className="w-4 h-4 text-gray-500" />
+        <div className="flex items-center gap-1"> {/* Reduced gap from gap-2 to gap-1 */}
+          <span className="text-lg">{selectedCode.flag}</span>
+          <span className="font-medium">{selectedCode.code}</span>
+        </div>
+        <ChevronDownIcon 
+          className={`w-4 h-4 text-gray-500 transition-transform ${isOpen ? 'transform rotate-180' : ''}`}
+        />
       </button>
 
       {isOpen && (
         <motion.div
-          initial={{ opacity: 0, y: -5 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -5 }}
-          className="absolute mt-2 w-full bg-white border border-gray-300 rounded-lg shadow-lg z-10 max-h-60 overflow-y-auto"
+          initial={{ opacity: 0, y: -10, scale: 0.95 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          exit={{ opacity: 0, y: -10, scale: 0.95 }}
+          className="absolute mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg z-20 overflow-hidden"
         >
-          <input
-            type="text"
-            placeholder="Search..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-full px-4 py-2 border-b border-gray-200 outline-none focus:ring-2 focus:ring-blue-400"
-          />
+          <div className="p-2 border-b border-gray-100">
+            <div className="relative">
+              <input
+                type="text"
+                placeholder="Search country or code..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="w-full pl-8 pr-4 py-2 text-sm border border-gray-200 rounded-md focus:ring-2 focus:ring-blue-400 focus:outline-none"
+                autoFocus
+              />
+              <svg
+                className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-400"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                />
+              </svg>
+            </div>
+          </div>
 
-          <ul className="divide-y divide-gray-100 max-h-48 overflow-y-auto">
+          <div className="max-h-60 overflow-y-auto">
             {filteredDialCodes.length > 0 ? (
               filteredDialCodes.map((dial) => (
-                <li
+                <div
                   key={dial.code}
                   onClick={() => {
                     onChange(dial);
                     setIsOpen(false);
                     setSearch("");
                   }}
-                  className="flex items-center gap-2 px-4 py-2 hover:bg-blue-50 cursor-pointer"
+                  className={`flex items-center gap-3 px-4 py-2 hover:bg-blue-50 cursor-pointer transition-colors ${
+                    selectedCode.code === dial.code ? 'bg-blue-50' : ''
+                  }`}
                 >
                   <span className="text-lg">{dial.flag}</span>
-                  <span>{dial.country}</span>
-                  <span className="ml-auto text-gray-500">{dial.code}</span>
-                </li>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-gray-900 truncate">
+                      {dial.country}
+                    </p>
+                    <p className="text-xs text-gray-500">{dial.code}</p>
+                  </div>
+                  {selectedCode.code === dial.code && (
+                    <CheckCircleIcon className="h-4 w-4 text-blue-500" />
+                  )}
+                </div>
               ))
             ) : (
-              <li className="px-4 py-2 text-gray-400">No matches found</li>
+              <div className="px-4 py-3 text-center text-sm text-gray-500">
+                No matching countries found
+              </div>
             )}
-          </ul>
+          </div>
         </motion.div>
       )}
     </div>
@@ -92,12 +138,14 @@ const UpdateCarOwnerModal = ({ isOpen, closeModal, carowner, onUpdateSuccess, se
     balance: "",
   });
   const [profilePic, setProfilePic] = useState(null);
+  const [previewImage, setPreviewImage] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [userId, setUserId] = useState("");
 
   const modalRef = useRef(null);
+  const fileInputRef = useRef(null);
 
   // ✅ Get user id from token on mount
   useEffect(() => {
@@ -131,6 +179,11 @@ const UpdateCarOwnerModal = ({ isOpen, closeModal, carowner, onUpdateSuccess, se
         phone_number: carowner.phone_number || "",
         balance: 0,
       });
+      
+      // Set the existing profile picture as preview if available
+      if (carowner.profile_pic) {
+        setPreviewImage(carowner.profile_pic);
+      }
     }
   }, [carowner]);
 
@@ -152,7 +205,38 @@ const UpdateCarOwnerModal = ({ isOpen, closeModal, carowner, onUpdateSuccess, se
   };
 
   const handleFileChange = (e) => {
-    setProfilePic(e.target.files[0]);
+    const file = e.target.files[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.match('image.*')) {
+      setError("❌ Please select an image file (JPEG, PNG)");
+      return;
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      setError("❌ Image size should be less than 5MB");
+      return;
+    }
+
+    setProfilePic(file);
+    setError("");
+
+    // Create preview
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setPreviewImage(reader.result);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleRemoveImage = () => {
+    setProfilePic(null);
+    setPreviewImage("");
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
   };
 
   // ✅ Submit handler
@@ -184,13 +268,16 @@ const UpdateCarOwnerModal = ({ isOpen, closeModal, carowner, onUpdateSuccess, se
     try {
       const data = new FormData();
       data.append("user", userId);
-      data.append("dial_code", formData.dial_code.code); // Use the dial code value
+      data.append("dial_code", formData.dial_code.code);
       data.append("phone_number", formData.phone_number);
       data.append("balance", Number(carowner.balance) + Number(formData.balance));
 
-      // If no new profile picture is provided, pass the existing image URL
-      if (profilePic instanceof File) {
+      // Only append profile_pic if a new one was selected
+      if (profilePic) {
         data.append("profile_pic", profilePic);
+      } else if (!previewImage) {
+        // If there's no preview and no file, remove existing image
+        data.append("profile_pic", "");
       }
 
       const response = await axios.put(`${BACKEND_URL}/store/carowners/${carowner.id}/`, data, {
@@ -203,6 +290,7 @@ const UpdateCarOwnerModal = ({ isOpen, closeModal, carowner, onUpdateSuccess, se
       // Reset form data
       setFormData({ dial_code: DIAL_CODES[0], phone_number: "", balance: "" });
       setProfilePic(null);
+      setPreviewImage("");
 
       // ✅ Show success modal
       setShowSuccessModal(true);
@@ -217,7 +305,7 @@ const UpdateCarOwnerModal = ({ isOpen, closeModal, carowner, onUpdateSuccess, se
         // Clear the notification after 5 seconds
         setTimeout(() => {
           setNotification({ message: "", type: "" });
-        }, 5000); // 5 seconds
+        }, 5000);
       }
 
       if (onUpdateSuccess) {
@@ -280,20 +368,70 @@ const UpdateCarOwnerModal = ({ isOpen, closeModal, carowner, onUpdateSuccess, se
           >
             <motion.div
               ref={modalRef}
-              className="bg-white rounded-2xl shadow-xl p-8 w-full max-w-md relative"
+              className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-md relative"
               initial={{ scale: 0.8, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.8, opacity: 0 }}
             >
+              {/* Header */}
+              <div className="flex justify-between items-center pb-4 border-b">
+                <h2 className="text-xl font-bold text-gray-800">Update Car Owner</h2>
+                <button
+                  onClick={closeModal}
+                  className="text-gray-500 hover:text-gray-700"
+                >
+                  <XMarkIcon className="h-6 w-6" />
+                </button>
+              </div>
 
-              <h2 className="text-2xl font-bold text-blue-700 mb-6 text-center">
-                Update Car Owner
-              </h2>
+              <form onSubmit={handleSubmit} className="mt-4 space-y-4">
+                {/* Profile Picture Upload */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Profile Picture
+                  </label>
+                  <div className="flex items-center gap-4">
+                    <div 
+                      onClick={() => fileInputRef.current.click()}
+                      className="w-20 h-20 rounded-full border-2 border-dashed border-gray-300 flex items-center justify-center cursor-pointer hover:border-blue-400 transition-colors overflow-hidden"
+                    >
+                      {previewImage ? (
+                        <img 
+                          src={previewImage} 
+                          alt="Profile preview" 
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <PhotoIcon className="w-8 h-8 text-gray-400" />
+                      )}
+                    </div>
+                    <div className="flex-1">
+                      <button
+                        type="button"
+                        onClick={() => fileInputRef.current.click()}
+                        className="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-md text-sm transition-colors"
+                      >
+                        {previewImage ? "Change Photo" : "Upload Photo"}
+                      </button>
+                      <p className="text-xs text-gray-500 mt-1">
+                        JPEG or PNG (max 5MB)
+                      </p>
+                    </div>
+                    <input
+                      type="file"
+                      ref={fileInputRef}
+                      onChange={handleFileChange}
+                      accept="image/*"
+                      className="hidden"
+                    />
+                  </div>
+                </div>
 
-              <form onSubmit={handleSubmit} className="flex flex-col gap-4">
                 {/* Combined Dial Code and Phone Number Field */}
                 <div>
-                  <label className="block text-gray-700 mb-2">Phone Number</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Phone Number
+                  </label>
                   <div className="flex gap-2">
                     {/* Dial Code Dropdown */}
                     <DialCodeSelector
@@ -309,93 +447,61 @@ const UpdateCarOwnerModal = ({ isOpen, closeModal, carowner, onUpdateSuccess, se
                       name="phone_number"
                       value={formData.phone_number}
                       onChange={handleChange}
-                      className="w-2/3 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-400 outline-none"
-                      placeholder="Enter phone number"
+                      className="w-2/3 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-400 outline-none"
+                      placeholder="Phone number"
                       required
-                      maxLength={10} // Limit input to 10 digits
+                      maxLength={10}
                     />
                   </div>
                 </div>
 
                 {/* Balance Field */}
                 <div>
-                  <label className="block text-gray-700 mb-2">Add Balance</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Add Balance
+                  </label>
                   <input
                     type="number"
                     name="balance"
                     value={formData.balance}
                     onChange={handleChange}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-400 outline-none"
-                    placeholder="Enter your balance"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-400 outline-none"
+                    placeholder="Enter balance amount"
                     required
-                    maxLength={8} // Optional: Adds client-side validation for max length
-                  />
-                </div>
-
-                {/* Profile Picture Field */}
-                <div>
-                  <label className="block text-gray-700 mb-2">Profile Picture</label>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={handleFileChange}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-400 outline-none"
+                    maxLength={8}
                   />
                 </div>
 
                 {error && (
-                  <p className="text-red-500 text-sm text-center">{error}</p>
+                  <div className="p-3 bg-red-50 text-red-600 text-sm rounded-md">
+                    {error}
+                  </div>
                 )}
 
-              {/* Buttons */}
-              <div className="flex justify-end gap-4 mt-6">
-                <button
-                  type="button"
-                  onClick={closeModal}
-                  disabled={loading}
-                  className={`px-4 py-2 ${
-                    loading ? "bg-gray-200" : "bg-gray-300"
-                  } text-gray-700 rounded-lg hover:bg-gray-400 transition-all disabled:opacity-50`}
-                >
-                  Cancel
-                </button>
-
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className={`px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all flex items-center justify-center min-w-[100px] ${
-                    loading ? "bg-blue-700 cursor-wait" : ""
-                  }`}
-                >
-                  {loading ? (
-                    <>
-                      <svg
-                        className="animate-spin -ml-1 mr-2 h-4 w-4 text-white"
-                        xmlns="http://www.w3.org/2000/svg"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                      >
-                        <circle
-                          className="opacity-25"
-                          cx="12"
-                          cy="12"
-                          r="10"
-                          stroke="currentColor"
-                          strokeWidth="4"
-                        ></circle>
-                        <path
-                          className="opacity-75"
-                          fill="currentColor"
-                          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                        ></path>
-                      </svg>
-                      Updating...
-                    </>
-                  ) : (
-                    "Update"
-                  )}
-                </button>
-              </div>
+                {/* Buttons */}
+                <div className="flex justify-end space-x-4 pt-4">
+                  <button
+                    type="button"
+                    onClick={closeModal}
+                    className="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="flex items-center justify-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {loading ? (
+                      <>
+                        <ArrowPathIcon className="animate-spin h-4 w-4 mr-2" />
+                        Updating...
+                      </>
+                    ) : (
+                      "Update Car Owner"
+                    )}
+                  </button>
+                </div>
               </form>
             </motion.div>
           </motion.div>

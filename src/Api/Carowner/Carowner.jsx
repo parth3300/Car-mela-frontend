@@ -7,9 +7,10 @@ import { UserIcon, IdentificationIcon } from "@heroicons/react/24/solid";
 import CreateCarownerModal from "./CreateCarownerModal";
 import CarownerModal from "./CarownerModal";
 import UpdateCarownerModal from "./UpdateCarownerModal";
-import { PencilSquareIcon } from "@heroicons/react/24/solid"; // For edit icon
+import { PencilSquareIcon } from "@heroicons/react/24/solid";
 import { jwtDecode } from "jwt-decode";
 import SkeletonLoader from "../../components/SkeletonLoader";
+import ResponseHandler from "../../components/Globle/ResponseHandler";
 
 const Carowners = () => {
   const [carowners, setCarowners] = useState([]);
@@ -17,9 +18,14 @@ const Carowners = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [selectedCarowner, setSelectedCarowner] = useState(null);
-  const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false); // State for UpdateCarownerModal visibility
-  const [carownerToUpdate, setCarownerToUpdate] = useState(null); // State to store the car owner to update
+  const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false);
+  const [carownerToUpdate, setCarownerToUpdate] = useState(null);
   const [notification, setNotification] = useState({ message: "", type: "" });
+  const [processing, setProcessing] = useState({
+    create: false,
+    update: false,
+    delete: false
+  });
 
   const authToken = localStorage.getItem("authToken");
   let user_id = "";
@@ -27,7 +33,6 @@ const Carowners = () => {
     let decoded = jwtDecode(authToken);
     user_id = decoded?.user_id;
   }
-
 
   const fetchCarowners = async () => {
     setLoading(true);
@@ -60,6 +65,7 @@ const Carowners = () => {
       message: "Carowner deleted successfully!",
       type: "success",
     });
+    setProcessing({ ...processing, delete: false });
   };
 
   const handleCreateSuccess = (newCarowner) => {
@@ -69,6 +75,7 @@ const Carowners = () => {
       message: "Car owner created successfully! 🎉",
       type: "success",
     });
+    setProcessing({ ...processing, create: false });
   };
 
   const handleUpdateSuccess = (updatedCarowner) => {
@@ -77,18 +84,16 @@ const Carowners = () => {
         owner.id === updatedCarowner.id ? updatedCarowner : owner
       )
     );
-    setIsUpdateModalOpen(false); // Close the modal after successful update
+    setIsUpdateModalOpen(false);
     setNotification({
       message: "Car owner updated successfully! 🎉",
       type: "success",
     });
+    setProcessing({ ...processing, update: false });
   };
 
-  let user_is_carowner = "";
-  user_is_carowner = carowners.find(
-    (owner) => {
-      return owner.user === user_id}
-  );
+  let user_is_carowner = carowners.find((owner) => owner.user === user_id);
+
   return (
     <div className="bg-gradient-to-b from-blue-50 to-white min-h-screen p-8 flex flex-col items-center">
       {/* Heading */}
@@ -101,24 +106,18 @@ const Carowners = () => {
         🚘 Explore Car Owners
       </motion.h1>
 
-      {/* Notification */}
-      <AnimatePresence>
-        {notification.message && (
-          <motion.div
-            className="fixed top-4 right-4 p-4 rounded-lg shadow-lg z-50"
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-            style={{
-              backgroundColor:
-                notification.type === "success" ? "#D1FAE5" : "#FEE2E2",
-              color: notification.type === "success" ? "#065F46" : "#991B1B",
-            }}
-          >
-            {notification.message}
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {/* Response Handler */}
+      <ResponseHandler
+        resourceName="Car Owner"
+        action={
+          processing.create ? "create" : 
+          processing.update ? "update" : 
+          processing.delete ? "delete" : ""
+        }
+        error={notification.type === "error" ? { message: notification.message } : null}
+        success={notification.type === "success" ? { message: notification.message } : null}
+        onClear={() => setNotification({ message: "", type: "" })}
+      />
 
       {/* Search + Create */}
       <motion.div
@@ -138,7 +137,7 @@ const Carowners = () => {
 
         {/* Create button */}
         {user_is_carowner ? (
-          "" // Nothing is rendered if the user is already a car owner
+          ""
         ) : authToken ? (
           <motion.button
             onClick={() => setShowCreateModal(true)}
@@ -168,14 +167,12 @@ const Carowners = () => {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.8 }}
-
               transition={{ delay: index * 0.05, duration: 0.3 }}
-              className="w-full" // Ensure the motion.div takes full width
+              className="w-full"
             >
               <div
                 onClick={() => setSelectedCarowner(carowner)}
-                className="relative flex flex-col items-center bg-white rounded-2xl p-6 shadow-md hover:shadow-lg border border-gray-100 cursor-pointer transition-all duration-300 group h-full" // Add h-full for consistent height
-                style={{ transformOrigin: "center" }} // Ensure scaling originates from the center
+                className="relative flex flex-col items-center bg-white rounded-2xl p-6 shadow-md hover:shadow-lg border border-gray-100 cursor-pointer transition-all duration-300 group h-full"
               >
                 {/* Profile Picture */}
                 <div className="bg-blue-100 p-4 rounded-full mb-4">
@@ -201,7 +198,6 @@ const Carowners = () => {
                     {carowner.cars_count || 0} Cars
                   </div>
 
-                  {/* Star Rating */}
                   <StarRating rating={parseFloat(carowner.ratings || 0)} />
                 </div>
 
@@ -215,9 +211,9 @@ const Carowners = () => {
                 {authToken && user_id && user_id === carowner?.user && (
                   <button
                     onClick={(e) => {
-                      e.stopPropagation(); // Prevent opening the details modal
-                      setCarownerToUpdate(carowner); // Set the car owner to update
-                      setIsUpdateModalOpen(true); // Open the update modal
+                      e.stopPropagation();
+                      setCarownerToUpdate(carowner);
+                      setIsUpdateModalOpen(true);
                     }}
                     className="absolute bottom-4 right-4 p-2 bg-blue-600 text-white rounded-full hover:bg-blue-700 transition-all"
                   >
@@ -225,7 +221,6 @@ const Carowners = () => {
                   </button>
                 )}
 
-                {/* View Details Link */}
                 <motion.div
                   className="mt-4 text-left text-sm text-blue-600 font-medium hover:text-blue-700 transition-all"
                   whileHover={{ scale: 1.05 }}
@@ -254,9 +249,11 @@ const Carowners = () => {
         {showCreateModal && (
           <CreateCarownerModal
             isOpen={showCreateModal}
-            closeModal={() => setShowCreateModal(false)}
+            closeModal={() => !processing.create && setShowCreateModal(false)}
             onCreateSuccess={handleCreateSuccess}
             setNotification={setNotification}
+            processing={processing.create}
+            setProcessing={(value) => setProcessing({ ...processing, create: value })}
           />
         )}
       </AnimatePresence>
@@ -267,8 +264,10 @@ const Carowners = () => {
           <CarownerModal
             isOpen={!!selectedCarowner}
             carowner={selectedCarowner}
-            closeModal={() => setSelectedCarowner(null)}
+            closeModal={() => !processing.delete && setSelectedCarowner(null)}
             onDeleteSuccess={handleDeleteSuccess}
+            processing={processing.delete}
+            setProcessing={(value) => setProcessing({ ...processing, delete: value })}
           />
         )}
       </AnimatePresence>
@@ -278,10 +277,12 @@ const Carowners = () => {
         {isUpdateModalOpen && (
           <UpdateCarownerModal
             isOpen={isUpdateModalOpen}
-            carowner={carownerToUpdate} // Pass the car owner to update directly
-            closeModal={() => setIsUpdateModalOpen(false)}
+            carowner={carownerToUpdate}
+            closeModal={() => !processing.update && setIsUpdateModalOpen(false)}
             onUpdateSuccess={handleUpdateSuccess}
             setNotification={setNotification}
+            processing={processing.update}
+            setProcessing={(value) => setProcessing({ ...processing, update: value })}
           />
         )}
       </AnimatePresence>

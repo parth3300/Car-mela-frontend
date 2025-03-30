@@ -7,8 +7,8 @@ import { CheckCircleIcon, ChevronDownIcon, PhotoIcon, XMarkIcon } from "@heroico
 import ResponseHandler from "../../components/Globle/ResponseHandler";
 
 const DIAL_CODES = [
+  { code: "+91", country: "India", flag: "🇮🇳🇩" },
   { code: "+1", country: "USA", flag: "🇺🇸" },
-  { code: "+91", country: "India", flag: "🇮🇳" },
   { code: "+44", country: "UK", flag: "🇬🇧" },
   { code: "+61", country: "Australia", flag: "🇦🇺" },
   { code: "+81", country: "Japan", flag: "🇯🇵" },
@@ -22,6 +22,7 @@ const DIAL_CODES = [
 const DialCodeSelector = ({ selectedCode, onChange }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [search, setSearch] = useState("");
+  const dropdownRef = useRef(null);
 
   const filteredDialCodes = DIAL_CODES.filter(
     (dial) =>
@@ -29,55 +30,102 @@ const DialCodeSelector = ({ selectedCode, onChange }) => {
       dial.code.includes(search)
   );
 
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setIsOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
+
   return (
-    <div className="relative w-1/3">
+    <div className="relative w-1/2">
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full px-4 py-2 border border-gray-300 rounded-lg flex items-center justify-between focus:ring-2 focus:ring-blue-400 bg-white"
+        className="w-full px-3 py-2 border border-gray-300 rounded-lg flex items-center justify-between focus:ring-2 focus:ring-blue-400 bg-white hover:bg-gray-50 transition-colors"
       >
-        <span>
-          {selectedCode.flag} {selectedCode.code}
-        </span>
-        <ChevronDownIcon className="w-4 h-4 text-gray-500" />
+        <div className="flex items-center gap-1"> {/* Reduced gap from gap-2 to gap-1 */}
+          <span className="text-lg">{selectedCode.flag}</span>
+          <span className="font-medium">{selectedCode.code}</span>
+        </div>
+        <ChevronDownIcon 
+          className={`w-4 h-4 text-gray-500 transition-transform ${isOpen ? 'transform rotate-180' : ''}`}
+        />
       </button>
 
       {isOpen && (
         <motion.div
-          initial={{ opacity: 0, y: -5 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -5 }}
-          className="absolute mt-2 w-full bg-white border border-gray-300 rounded-lg shadow-lg z-10 max-h-60 overflow-y-auto"
+          initial={{ opacity: 0, y: -10, scale: 0.95 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          exit={{ opacity: 0, y: -10, scale: 0.95 }}
+          className="absolute mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg z-20 overflow-hidden"
         >
-          <input
-            type="text"
-            placeholder="Search..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-full px-4 py-2 border-b border-gray-200 outline-none focus:ring-2 focus:ring-blue-400"
-          />
+          <div className="p-2 border-b border-gray-100">
+            <div className="relative">
+              <input
+                type="text"
+                placeholder="Search country or code..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="w-full pl-8 pr-4 py-2 text-sm border border-gray-200 rounded-md focus:ring-2 focus:ring-blue-400 focus:outline-none"
+                autoFocus
+              />
+              <svg
+                className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-400"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                />
+              </svg>
+            </div>
+          </div>
 
-          <ul className="divide-y divide-gray-100 max-h-48 overflow-y-auto">
+          <div className="max-h-60 overflow-y-auto">
             {filteredDialCodes.length > 0 ? (
               filteredDialCodes.map((dial) => (
-                <li
+                <div
                   key={dial.code}
                   onClick={() => {
                     onChange(dial);
                     setIsOpen(false);
                     setSearch("");
                   }}
-                  className="flex items-center gap-2 px-4 py-2 hover:bg-blue-50 cursor-pointer"
+                  className={`flex items-center gap-3 px-4 py-2 hover:bg-blue-50 cursor-pointer transition-colors ${
+                    selectedCode.code === dial.code ? 'bg-blue-50' : ''
+                  }`}
                 >
                   <span className="text-lg">{dial.flag}</span>
-                  <span>{dial.country}</span>
-                  <span className="ml-auto text-gray-500">{dial.code}</span>
-                </li>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-gray-900 truncate">
+                      {dial.country}
+                    </p>
+                    <p className="text-xs text-gray-500">{dial.code}</p>
+                  </div>
+                  {selectedCode.code === dial.code && (
+                    <CheckCircleIcon className="h-4 w-4 text-blue-500" />
+                  )}
+                </div>
               ))
             ) : (
-              <li className="px-4 py-2 text-gray-400">No matches found</li>
+              <div className="px-4 py-3 text-center text-sm text-gray-500">
+                No matching countries found
+              </div>
             )}
-          </ul>
+          </div>
         </motion.div>
       )}
     </div>

@@ -3,6 +3,7 @@ import axios from "axios";
 import { motion } from "framer-motion";
 import { BACKEND_URL } from "../../Constants/constant";
 import Notification from "../../components/Globle/Notification";
+import { PhotoIcon } from "@heroicons/react/24/solid";
 
 const DealershipModal = ({
   isOpen,
@@ -30,10 +31,7 @@ const DealershipModal = ({
       }
     };
 
-    // Attach the event listener
     document.addEventListener("mousedown", handleClickOutside);
-
-    // Cleanup the event listener
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
@@ -51,19 +49,15 @@ const DealershipModal = ({
     }
 
     setLoading(true);
-    console.log("Starting DELETE request...");
-
     try {
-      const url = `${BACKEND_URL}/store/dealerships/${dealership.id}/`;
-      console.log("DELETE URL:", url);
-
-      const response = await axios.delete(url, {
-        headers: {
-          Authorization: `Bearer ${authToken}`,
-        },
-      });
-
-      console.log("DELETE successful:", response.status);
+      const response = await axios.delete(
+        `${BACKEND_URL}/store/dealerships/${dealership.id}/`,
+        {
+          headers: {
+            Authorization: `Bearer ${authToken}`,
+          },
+        }
+      );
 
       setNotification({
         message: "Dealership successfully removed!",
@@ -76,7 +70,6 @@ const DealershipModal = ({
 
       closeModal();
     } catch (error) {
-      console.error("DELETE failed:", error.response || error);
       setNotification({
         message: "Failed to remove dealership. Please try again.",
         type: "error",
@@ -87,12 +80,17 @@ const DealershipModal = ({
     }
   };
 
+  // Function to handle image error
+  const handleImageError = (e) => {
+    e.target.style.display = 'none'; // Hide the broken image
+  };
+
   return (
     <>
       {/* Modal Overlay */}
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
         <motion.div
-          ref={modalRef} // Attach the ref to the modal container
+          ref={modalRef}
           className="bg-white rounded-2xl p-8 w-full max-w-md shadow-lg relative overflow-y-auto"
           initial={{ scale: 0.8, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
@@ -113,20 +111,34 @@ const DealershipModal = ({
             {dealership.dealership_name}
           </h2>
 
-          {/* Dealership Logo (Optional) */}
-          {dealership.logo && (
-            <div className="flex justify-center mb-6">
-              <img
-                src={dealership.logo}
-                alt={dealership.dealership_name}
-                className="rounded-lg object-cover w-32 h-32 border shadow-md"
-              />
-            </div>
-          )}
+          {/* Dealership Image */}
+          <div className="relative w-full h-48 mb-6 rounded-lg overflow-hidden bg-gray-100 flex items-center justify-center">
+            {dealership.image ? (
+              <>
+                <img
+                  src={dealership.image}
+                  alt={dealership.dealership_name}
+                  className="w-full h-full object-cover"
+                  onError={handleImageError}
+                />
+                {/* Fallback if image fails to load */}
+                {!dealership.image && (
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <PhotoIcon className="h-16 w-16 text-gray-400" />
+                  </div>
+                )}
+              </>
+            ) : (
+              <div className="absolute inset-0 flex items-center justify-center">
+                <PhotoIcon className="h-16 w-16 text-gray-400" />
+                <span className="sr-only">No image available</span>
+              </div>
+            )}
+          </div>
 
           {/* Dealership Details */}
           <div className="space-y-4 text-gray-700">
-          <div className="flex justify-between">
+            <div className="flex justify-between">
               <span className="font-semibold">Contact:</span>
               <span>
                 {dealership.dial_code && dealership.phone_number
@@ -136,7 +148,7 @@ const DealershipModal = ({
             </div>
             <div className="flex justify-between">
               <span className="font-semibold">Address:</span>
-              <span>{dealership.address || "N/A"}</span>
+              <span className="text-right">{dealership.address || "N/A"}</span>
             </div>
             <div className="flex justify-between">
               <span className="font-semibold">Ratings:</span>
@@ -196,9 +208,35 @@ const DealershipModal = ({
                       loading
                         ? "bg-red-400 cursor-not-allowed"
                         : "bg-red-600 hover:bg-red-700"
-                    } transition-all`}
+                    } transition-all flex items-center justify-center min-w-[120px]`}
                   >
-                    {loading ? "Processing..." : "Yes, Delete"}
+                    {loading ? (
+                      <>
+                        <svg
+                          className="animate-spin -ml-1 mr-2 h-4 w-4 text-white"
+                          xmlns="http://www.w3.org/2000/svg"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                        >
+                          <circle
+                            className="opacity-25"
+                            cx="12"
+                            cy="12"
+                            r="10"
+                            stroke="currentColor"
+                            strokeWidth="4"
+                          ></circle>
+                          <path
+                            className="opacity-75"
+                            fill="currentColor"
+                            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                          ></path>
+                        </svg>
+                        Deleting...
+                      </>
+                    ) : (
+                      "Yes, Delete"
+                    )}
                   </button>
                   <button
                     onClick={() => setShowConfirm(false)}

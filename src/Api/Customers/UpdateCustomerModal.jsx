@@ -1,8 +1,133 @@
 import React, { useState, useEffect, useRef } from "react";
 import axios from "axios";
 import { motion } from "framer-motion";
-import { XMarkIcon, PhotoIcon } from "@heroicons/react/24/solid";
+import { XMarkIcon, PhotoIcon, ArrowPathIcon, ChevronDownIcon, CheckCircleIcon } from "@heroicons/react/24/solid";
 import { BACKEND_URL } from "../../Constants/constant";
+
+const DIAL_CODES = [
+  { code: "+91", country: "India", flag: "🇮🇳" },
+  { code: "+1", country: "USA", flag: "🇺🇸" },
+  { code: "+44", country: "UK", flag: "🇬🇧" },
+  { code: "+61", country: "Australia", flag: "🇦🇺" },
+  { code: "+81", country: "Japan", flag: "🇯🇵" },
+  { code: "+86", country: "China", flag: "🇨🇳" },
+  { code: "+33", country: "France", flag: "🇫🇷" },
+  { code: "+49", country: "Germany", flag: "🇩🇪" },
+  { code: "+7", country: "Russia", flag: "🇷🇺" },
+  { code: "+52", country: "Mexico", flag: "🇲🇽" },
+];
+
+const DialCodeSelector = ({ selectedCode, onChange }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const [search, setSearch] = useState("");
+  const dropdownRef = useRef(null);
+
+  const filteredDialCodes = DIAL_CODES.filter(
+    (dial) =>
+      dial.country.toLowerCase().includes(search.toLowerCase()) ||
+      dial.code.includes(search)
+  );
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setIsOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
+
+  return (
+    <div className="relative w-24">
+      <button
+        type="button"
+        onClick={() => setIsOpen(!isOpen)}
+        className="w-full px-3 py-2 h-full border border-gray-300 rounded-l-md flex items-center justify-between focus:ring-2 focus:ring-blue-400 bg-white hover:bg-gray-50 transition-colors"
+      >
+        <div className="flex items-center gap-1">
+          <span className="text-lg">{selectedCode.flag}</span>
+          <span className="font-medium">{selectedCode.code}</span>
+        </div>
+        <ChevronDownIcon 
+          className={`w-4 h-4 text-gray-500 transition-transform ${isOpen ? 'transform rotate-180' : ''}`}
+        />
+      </button>
+
+      {isOpen && (
+        <motion.div
+          initial={{ opacity: 0, y: -10, scale: 0.95 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          exit={{ opacity: 0, y: -10, scale: 0.95 }}
+          className="absolute mt-1 w-64 bg-white border border-gray-200 rounded-lg shadow-lg z-20 overflow-hidden"
+        >
+          <div className="p-2 border-b border-gray-100">
+            <div className="relative">
+              <input
+                type="text"
+                placeholder="Search country or code..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="w-full pl-8 pr-4 py-2 text-sm border border-gray-200 rounded-md focus:ring-2 focus:ring-blue-400 focus:outline-none"
+                autoFocus
+              />
+              <svg
+                className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-400"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                />
+              </svg>
+            </div>
+          </div>
+
+          <div className="max-h-60 overflow-y-auto">
+            {filteredDialCodes.length > 0 ? (
+              filteredDialCodes.map((dial) => (
+                <div
+                  key={dial.code}
+                  onClick={() => {
+                    onChange(dial);
+                    setIsOpen(false);
+                    setSearch("");
+                  }}
+                  className={`flex items-center gap-3 px-4 py-2 hover:bg-blue-50 cursor-pointer transition-colors ${
+                    selectedCode.code === dial.code ? 'bg-blue-50' : ''
+                  }`}
+                >
+                  <span className="text-lg">{dial.flag}</span>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-gray-900 truncate">
+                      {dial.country}
+                    </p>
+                    <p className="text-xs text-gray-500">{dial.code}</p>
+                  </div>
+                  {selectedCode.code === dial.code && (
+                    <CheckCircleIcon className="h-4 w-4 text-blue-500" />
+                  )}
+                </div>
+              ))
+            ) : (
+              <div className="px-4 py-3 text-center text-sm text-gray-500">
+                No matching countries found
+              </div>
+            )}
+          </div>
+        </motion.div>
+      )}
+    </div>
+  );
+};
 
 const UpdateCustomerModal = ({
   isOpen,
@@ -12,7 +137,7 @@ const UpdateCustomerModal = ({
   setNotification,
 }) => {
   const [formData, setFormData] = useState({
-    dial_code: 91,
+    dial_code: "+91",
     phone_number: "",
     profile_pic: null
   });
@@ -25,12 +150,11 @@ const UpdateCustomerModal = ({
   useEffect(() => {
     if (customer) {
       setFormData({
-        dial_code: customer.dial_code || 91,
+        dial_code: customer.dial_code ? `+${customer.dial_code}` : "+91",
         phone_number: customer.phone_number || "",
         profile_pic: null
       });
       
-      // Set preview image if customer already has a profile picture
       if (customer.profile_pic) {
         setPreviewImage(`${customer.profile_pic}`);
       }
@@ -45,17 +169,22 @@ const UpdateCustomerModal = ({
     }));
   };
 
+  const handleDialCodeChange = (dialCode) => {
+    setFormData(prev => ({
+      ...prev,
+      dial_code: dialCode.code
+    }));
+  };
+
   const handleFileChange = (e) => {
     const file = e.target.files[0];
     if (!file) return;
 
-    // Validate file type
     if (!file.type.match('image.*')) {
       setError("❌ Please select an image file (JPEG, PNG)");
       return;
     }
 
-    // Validate file size (max 5MB)
     if (file.size > 5 * 1024 * 1024) {
       setError("❌ Image size should be less than 5MB");
       return;
@@ -64,7 +193,6 @@ const UpdateCustomerModal = ({
     setFormData((prev) => ({ ...prev, profile_pic: file }));
     setError("");
 
-    // Create preview
     const reader = new FileReader();
     reader.onloadend = () => {
       setPreviewImage(reader.result);
@@ -79,13 +207,13 @@ const UpdateCustomerModal = ({
 
     try {
       const authToken = localStorage.getItem("authToken");
-      
-      // Create FormData for file upload
       const formDataToSend = new FormData();
-      formDataToSend.append("dial_code", formData.dial_code);
+      
+      // Remove '+' from dial_code before sending
+      const dialCodeWithoutPlus = formData.dial_code.replace('+', '');
+      formDataToSend.append("dial_code", dialCodeWithoutPlus);
       formDataToSend.append("phone_number", formData.phone_number);
       
-      // Only append profile_pic if a new one was selected
       if (formData.profile_pic) {
         formDataToSend.append("profile_pic", formData.profile_pic);
       }
@@ -133,32 +261,25 @@ const UpdateCustomerModal = ({
 
   if (!isOpen) return null;
 
+  const selectedDialCode = DIAL_CODES.find(dial => dial.code === formData.dial_code) || DIAL_CODES[0];
+
   return (
-    <div
-      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
-      onClick={closeModal} // Close modal when clicking outside
-    >
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
       <motion.div
         initial={{ opacity: 0, scale: 0.9 }}
         animate={{ opacity: 1, scale: 1 }}
         exit={{ opacity: 0, scale: 0.9 }}
         className="bg-white rounded-xl shadow-xl w-full max-w-md relative"
-        onClick={(e) => e.stopPropagation()} // Prevent closing when clicking inside the modal
+        onClick={(e) => e.stopPropagation()}
       >
-        {/* Header */}
         <div className="flex justify-between items-center p-6 border-b">
           <h3 className="text-xl font-bold text-gray-800">Update Customer</h3>
-          <button
-            onClick={closeModal}
-            className="text-gray-500 hover:text-gray-700"
-          >
+          <button onClick={closeModal} className="text-gray-500 hover:text-gray-700">
             <XMarkIcon className="h-6 w-6" />
           </button>
         </div>
 
-        {/* Form */}
         <form onSubmit={handleSubmit} className="p-6">
-          {/* Profile Picture Upload */}
           <div className="mb-6">
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Profile Picture
@@ -200,23 +321,15 @@ const UpdateCustomerModal = ({
             </div>
           </div>
 
-          {/* Phone Number */}
           <div className="mb-6">
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Phone Number
             </label>
             <div className="flex">
-              <select
-                name="dial_code"
-                value={formData.dial_code}
-                onChange={handleChange}
-                className="w-24 px-3 py-2 border border-gray-300 rounded-l-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
-              >
-                <option value="91">+91 (IN)</option>
-                <option value="1">+1 (US)</option>
-                <option value="44">+44 (UK)</option>
-                <option value="81">+81 (JP)</option>
-              </select>
+              <DialCodeSelector 
+                selectedCode={selectedDialCode}
+                onChange={handleDialCodeChange}
+              />
               <input
                 type="tel"
                 name="phone_number"
@@ -225,8 +338,7 @@ const UpdateCustomerModal = ({
                 placeholder="Phone number"
                 className="flex-1 min-w-0 block w-full px-3 py-2 rounded-none rounded-r-md border border-gray-300 focus:ring-blue-500 focus:border-blue-500"
                 required
-                maxLength={10} // Limit input to 10 digits
-
+                maxLength={15}
               />
             </div>
           </div>
@@ -237,7 +349,6 @@ const UpdateCustomerModal = ({
             </div>
           )}
 
-          {/* Buttons */}
           <div className="flex justify-end space-x-4 pt-4">
             <button
               type="button"
@@ -249,9 +360,16 @@ const UpdateCustomerModal = ({
             <button
               type="submit"
               disabled={loading}
-              className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex items-center justify-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {loading ? "Updating..." : "Update Customer"}
+              {loading ? (
+                <>
+                  <ArrowPathIcon className="animate-spin h-4 w-4 mr-2" />
+                  Updating...
+                </>
+              ) : (
+                "Update Customer"
+              )}
             </button>
           </div>
         </form>
