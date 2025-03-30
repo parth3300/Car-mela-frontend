@@ -494,6 +494,11 @@ const UpdateCarModal = ({ isOpen, closeModal, car, onUpdateSuccess }) => {
                         name="price"
                         value={formData.price}
                         onChange={handleChange}
+                        onInput={(e) => {
+                          if (e.target.value.length > 2) {
+                            e.target.value = e.target.value.slice(0, 6);
+                          }
+                        }}
                         className="w-full p-2 border rounded-md"
                         required
                       />

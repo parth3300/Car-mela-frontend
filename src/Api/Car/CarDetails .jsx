@@ -1,14 +1,173 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { Link, useParams, useNavigate } from "react-router-dom";
 import axios from "axios";
-import StarRating from "../../components/StarRating";
-import { BACKEND_URL } from "../../Constants/constant";
 import { motion, AnimatePresence } from "framer-motion";
 import { jwtDecode } from "jwt-decode";
+import { loadStripe } from "@stripe/stripe-js";
+import { Dialog, Transition } from "@headlessui/react";
+import { Fragment } from "react";
+
+import StarRating from "../../components/StarRating";
+import { BACKEND_URL, STRIPE_PUBLISHABLE_KEY } from "../../Constants/constant";
 import Notification from "../../components/Globle/Notification";
 import CreateCarOwnerModal from "../Carowner/CreateCarownerModal";
-// CHANGE: Import the SkeletonLoader component
-import SkeletonLoader from "../../components/SkeletonLoader";
+
+
+
+const SkeletonLoader = () => {
+  return (
+    <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-12 animate-pulse p-6">
+      {/* Image Placeholder */}
+      <div className="space-y-6">
+        <div className="w-full h-[500px] bg-gray-300 dark:bg-gray-700 rounded-2xl relative overflow-hidden">
+          <div className="absolute inset-0 bg-gradient-to-r from-gray-300 via-gray-400 to-gray-300 dark:from-gray-700 dark:via-gray-600 dark:to-gray-700 animate-shimmer"></div>
+        </div>
+
+        {/* Reviews Placeholder */}
+        <div className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-md space-y-6">
+          <div className="h-6 w-1/3 bg-gray-300 dark:bg-gray-600 rounded"></div>
+          <div className="space-y-4">
+            {[...Array(3)].map((_, i) => (
+              <div key={i} className="border-b pb-4 space-y-2">
+                <div className="h-4 w-1/4 bg-gray-300 dark:bg-gray-600 rounded"></div>
+                <div className="flex space-x-1">
+                  {[...Array(5)].map((_, j) => (
+                    <div key={j} className="h-4 w-4 bg-gray-300 dark:bg-gray-600 rounded-full"></div>
+                  ))}
+                </div>
+                <div className="h-3 w-full bg-gray-300 dark:bg-gray-600 rounded"></div>
+                <div className="h-3 w-2/3 bg-gray-300 dark:bg-gray-600 rounded"></div>
+              </div>
+            ))}
+          </div>
+          <div className="h-10 w-full bg-gray-300 dark:bg-gray-600 rounded-lg"></div>
+        </div>
+      </div>
+
+      {/* Content Placeholder */}
+      <div className="space-y-8">
+        <div className="space-y-4">
+          <div className="h-10 w-3/4 bg-gray-300 dark:bg-gray-600 rounded"></div>
+          <div className="h-6 w-1/4 bg-gray-300 dark:bg-gray-600 rounded"></div>
+          <div className="flex space-x-2">
+            {[...Array(5)].map((_, i) => (
+              <div key={i} className="h-5 w-5 bg-gray-300 dark:bg-gray-600 rounded-full"></div>
+            ))}
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
+          {[...Array(6)].map((_, i) => (
+            <div key={i} className="space-y-2">
+              <div className="h-4 w-1/3 bg-gray-300 dark:bg-gray-600 rounded"></div>
+              <div className="h-4 w-2/3 bg-gray-300 dark:bg-gray-600 rounded"></div>
+            </div>
+          ))}
+        </div>
+
+        <div className="space-y-3">
+          <div className="h-5 w-1/4 bg-gray-300 dark:bg-gray-600 rounded"></div>
+          <div className="space-y-2">
+            {[...Array(3)].map((_, i) => (
+              <div key={i} className="h-3 w-full bg-gray-300 dark:bg-gray-600 rounded"></div>
+            ))}
+            <div className="h-3 w-2/3 bg-gray-300 dark:bg-gray-600 rounded"></div>
+          </div>
+        </div>
+
+        <div className="space-y-3">
+          <div className="h-5 w-1/4 bg-gray-300 dark:bg-gray-600 rounded"></div>
+          <div className="space-y-1">
+            {[...Array(2)].map((_, i) => (
+              <div key={i} className="h-4 w-1/2 bg-gray-300 dark:bg-gray-600 rounded"></div>
+            ))}
+          </div>
+        </div>
+
+        <div className="h-14 w-full bg-gray-300 dark:bg-gray-600 rounded-lg"></div>
+      </div>
+    </div>
+  );
+};
+
+
+const stripePromise = loadStripe(STRIPE_PUBLISHABLE_KEY);
+
+const PaymentMethodModal = ({ isOpen, onClose, onSelectPaymentMethod }) => {
+  return (
+    <Transition appear show={isOpen} as={Fragment}>
+      <Dialog as="div" className="relative z-50" onClose={onClose}>
+        <Transition.Child
+          as={Fragment}
+          enter="ease-out duration-300"
+          enterFrom="opacity-0"
+          enterTo="opacity-100"
+          leave="ease-in duration-200"
+          leaveFrom="opacity-100"
+          leaveTo="opacity-0"
+        >
+          <div className="fixed inset-0 bg-black bg-opacity-25" />
+        </Transition.Child>
+
+        <div className="fixed inset-0 overflow-y-auto">
+          <div className="flex min-h-full items-center justify-center p-4 text-center">
+            <Transition.Child
+              as={Fragment}
+              enter="ease-out duration-300"
+              enterFrom="opacity-0 scale-95"
+              enterTo="opacity-100 scale-100"
+              leave="ease-in duration-200"
+              leaveFrom="opacity-100 scale-100"
+              leaveTo="opacity-0 scale-95"
+            >
+              <Dialog.Panel className="w-full max-w-md transform overflow-hidden rounded-2xl bg-white p-6 text-left align-middle shadow-xl transition-all">
+                <Dialog.Title
+                  as="h3"
+                  className="text-lg font-medium leading-6 text-gray-900"
+                >
+                  Select Payment Method
+                </Dialog.Title>
+                <div className="mt-4">
+                  <p className="text-sm text-gray-500">
+                    Choose how you would like to pay for this car.
+                  </p>
+                </div>
+
+                <div className="mt-6 space-y-4">
+                  <button
+                    type="button"
+                    className="w-full flex justify-center items-center px-4 py-3 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                    onClick={() => onSelectPaymentMethod('cash')}
+                  >
+                    Pay with Cash (Balance Deduction)
+                  </button>
+                  <button
+                    type="button"
+                    className="w-full flex justify-center items-center px-4 py-3 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+                    onClick={() => onSelectPaymentMethod('card')}
+                  >
+                    Pay with Credit/Debit Card
+                  </button>
+                </div>
+
+                <div className="mt-4">
+                  <button
+                    type="button"
+                    className="inline-flex justify-center rounded-md border border-transparent bg-blue-100 px-4 py-2 text-sm font-medium text-blue-900 hover:bg-blue-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                    onClick={onClose}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </Dialog.Panel>
+            </Transition.Child>
+          </div>
+        </div>
+      </Dialog>
+    </Transition>
+  );
+};
+
 const CarDetails = () => {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -19,6 +178,7 @@ const CarDetails = () => {
   const [buttonLoading, setButtonLoading] = useState(false);
   const [reviews, setReviews] = useState([]);
   const [showReviewForm, setShowReviewForm] = useState(false);
+  const [showPaymentMethodModal, setShowPaymentMethodModal] = useState(false);
   const [newReview, setNewReview] = useState({
     ratings: 0,
     comment: "",
@@ -28,7 +188,7 @@ const CarDetails = () => {
     type: "",
   });
   const [showCreateCarOwnerModal, setShowCreateCarOwnerModal] = useState(false);
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false); // State for delete confirmation modal
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   const fetchCar = useCallback(async () => {
     setLoading(true);
@@ -71,7 +231,6 @@ const CarDetails = () => {
         type: "success",
       });
   
-      // Refetch the reviews to update the list
       fetchCar();
     } catch (error) {
       console.error("Error deleting review:", error);
@@ -160,7 +319,6 @@ const CarDetails = () => {
         type: "success",
       });
 
-      // Redirect to the cars list after deletion
       setTimeout(() => {
         navigate("/cars");
       }, 2000);
@@ -172,11 +330,10 @@ const CarDetails = () => {
       });
     } finally {
       setButtonLoading(false);
-      setShowDeleteConfirm(false); // Close the confirmation modal
+      setShowDeleteConfirm(false);
     }
   };
 
-  
   const handleBuyNow = async () => {
     const authToken = localStorage.getItem("authToken");
   
@@ -188,7 +345,23 @@ const CarDetails = () => {
       return navigate("/login");
     }
   
+    setShowPaymentMethodModal(true);
+  };
+
+  const handlePaymentMethodSelect = async (method) => {
+    setShowPaymentMethodModal(false);
+    
+    if (method === 'cash') {
+      await processCashPayment();
+    } else if (method === 'card') {
+      await processCardPayment();
+    }
+  };
+
+  const processCashPayment = async () => {
+    const authToken = localStorage.getItem("authToken");
     let decoded;
+    
     try {
       decoded = jwtDecode(authToken);
     } catch (error) {
@@ -213,7 +386,6 @@ const CarDetails = () => {
     setButtonLoading(true);
   
     try {
-      // ✅ Step 1: Check if user is a Car Owner
       const carownerResponse = await axios.get(`${BACKEND_URL}/store/carowners/`, {
         headers: {
           Authorization: `Bearer ${authToken}`,
@@ -225,13 +397,12 @@ const CarDetails = () => {
       );
   
       if (!carowner) {
-        // ✅ Show CreateCarOwner modal if not found
         setNotification({
           message: "Please become a Car Owner to purchase a car.",
           type: "info",
         });
         setShowCreateCarOwnerModal(true);
-        return; // 👉 Exit here! Don't proceed to purchase or reload.
+        return;
       }
   
       setNotification({
@@ -240,20 +411,18 @@ const CarDetails = () => {
       });
   
       const balance_deduct = new FormData();
-
       balance_deduct.append("balance", carowner.balance - car.price);
       balance_deduct.append("phone_number", carowner.phone_number);
       balance_deduct.append("user", carowner.user);
 
-      console.log(carowner.balance,car.price);
-      
-      if(carowner.balance < car.price){
+      if (carowner.balance < car.price) {
         setNotification({
           message: "You do not have enough balance!",
           type: "error",
         });
-        return
+        return;
       }
+      
       await axios.put(`${BACKEND_URL}/store/carowners/${carowner.id}/`, balance_deduct, {
         headers: {
           Authorization: `Bearer ${authToken}`,
@@ -261,10 +430,7 @@ const CarDetails = () => {
         },
       });
 
-
-      // ✅ Step 2: Proceed with car purchase
       const csrfToken = getCookie("csrftoken");
-  
       const formData = new FormData();
       formData.append("csrfmiddlewaretoken", csrfToken);
       formData.append("car", id);
@@ -277,41 +443,115 @@ const CarDetails = () => {
         },
       });
   
-
       setNotification({
         message: "Car purchase successful! 🎉",
         type: "success",
       });
   
-      // ✅ Reload ONLY after successful purchase
       setTimeout(() => {
         window.location.reload();
-      }, 1000); // optional delay for UX (1s)
+      }, 1000);
     } catch (error) {
-      console.error("❌ Error purchasing car:", error);
-  
-      let errorMessage = "An error occurred. Please try again.";
-      if (error.response) {
-        const { data } = error.response;
-        if (data && typeof data === "object") {
-          errorMessage = Object.values(data).flat().join(" ");
-        } else if (typeof data === "string") {
-          errorMessage = data;
-        }
-      } else {
-        errorMessage = "Network error. Please check your connection.";
-      }
-  
+      console.error("Error processing cash payment:", error);
       setNotification({
-        message: errorMessage,
+        message: "An error occurred. Please try again.",
         type: "error",
       });
     } finally {
       setButtonLoading(false);
-      // ❌ DO NOT reload here! This was causing the issue.
     }
   };
+
+  const processCardPayment = async () => {
+    const authToken = localStorage.getItem("authToken");
+    let decoded;
+    
+    try {
+      decoded = jwtDecode(authToken);
+    } catch (error) {
+      setNotification({
+        message: "Invalid token, please log in again.",
+        type: "error",
+      });
+      localStorage.removeItem("authToken");
+      return navigate("/login");
+    }
   
+    const user_id = decoded?.user_id;
+    if (!user_id) {
+      setNotification({
+        message: "User not found, please log in again.",
+        type: "error",
+      });
+      localStorage.removeItem("authToken");
+      return navigate("/login");
+    }
+  
+    setButtonLoading(true);
+  
+    try {
+      // Get car owner details
+      const carownerResponse = await axios.get(`${BACKEND_URL}/store/carowners/`, {
+        headers: {
+          Authorization: `Bearer ${authToken}`,
+        },
+      });
+  
+      const carowner = carownerResponse.data.find(
+        (owner) => owner.user === user_id
+      );
+  
+      console.log(carowner,"hi3");
+      
+      if (!carowner) {
+        setNotification({
+          message: "Please become a Car Owner to purchase a car.",
+          type: "info",
+        });
+        setShowCreateCarOwnerModal(true);
+        return;
+      }
+  
+      // Create checkout session with all parameters
+      const response = await axios.post(
+        `${BACKEND_URL}/store/create-checkout-session/`,
+        {
+          car_id: id,
+          carowner_id: carowner.id,
+          amount: car.price * 100,
+          currency: "usd",
+          user_id: user_id,
+          user_email: carowner.email,
+          user_name: carowner.name,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${authToken}`,
+          },
+        }
+      );
+  
+      const sessionId = response.data.id;
+      const stripe = await stripePromise;
+  
+      // Only pass sessionId to redirectToCheckout
+      const { error } = await stripe.redirectToCheckout({
+        sessionId: sessionId
+      });
+  
+      if (error) {
+        throw error;
+      }
+    } catch (error) {
+      console.error("Error processing card payment:", error);
+      setNotification({
+        message: error.response?.data?.error || "An error occurred during payment processing.",
+        type: "error",
+      });
+    } finally {
+      setButtonLoading(false);
+    }
+  };
 
   const getCookie = (name) => {
     let cookieValue = null;
@@ -368,7 +608,6 @@ const CarDetails = () => {
 
   return (
     <div className="bg-gradient-to-b from-blue-50 to-white min-h-screen py-10 px-6">
-      {/* CHANGE: Conditionally render SkeletonLoader while loading */}
       {loading ? (
         <SkeletonLoader />
       ) : (
@@ -378,7 +617,6 @@ const CarDetails = () => {
           animate={{ opacity: 1 }}
           transition={{ duration: 0.5 }}
         >
-          {/* LEFT COLUMN */}
           <div className="flex flex-col gap-6">
             <motion.img
               src={image || "https://via.placeholder.com/500?text=No+Image"}
@@ -389,7 +627,6 @@ const CarDetails = () => {
               transition={{ duration: 0.5 }}
             />
   
-            {/* REVIEWS SECTION */}
             <div className="bg-white p-6 rounded-xl shadow-md">
               <h3 className="text-xl font-semibold mb-4 text-blue-800">
                 Customer Reviews
@@ -439,7 +676,6 @@ const CarDetails = () => {
                   animate={{ opacity: 1 }}
                   transition={{ duration: 0.3 }}
                 >
-                  {/* Star Rating */}
                   <div className="flex items-center space-x-2">
                     <p className="text-gray-700 font-medium">Rating:</p>
                     {[1, 2, 3, 4, 5].map((star) => (
@@ -456,7 +692,6 @@ const CarDetails = () => {
                     ))}
                   </div>
   
-                  {/* Name Field (if NOT logged in) */}
                   {!localStorage.getItem("authToken") && (
                     <input
                       type="text"
@@ -469,7 +704,6 @@ const CarDetails = () => {
                     />
                   )}
   
-                  {/* Comment Field */}
                   <textarea
                     name="comment"
                     value={newReview.comment}
@@ -493,7 +727,6 @@ const CarDetails = () => {
             </div>
           </div>
   
-          {/* RIGHT COLUMN */}
           <div className="flex flex-col gap-8">
             <div>
               <h1 className="text-4xl font-extrabold text-blue-800 mb-2">
@@ -565,7 +798,6 @@ const CarDetails = () => {
             </div>
   
             <div className="flex flex-col lg:flex-row gap-4">
-              {/* Buy Now Button */}
               <motion.button
                 onClick={handleBuyNow}
                 disabled={buttonLoading || car.carowner}
@@ -582,7 +814,6 @@ const CarDetails = () => {
                   : "Buy Now"}
               </motion.button>
   
-              {/* Delete Car Button */}
               {authToken &&
                 user_id &&
                 carowner_user_id &&
@@ -604,8 +835,13 @@ const CarDetails = () => {
           </div>
         </motion.div>
       )}
-  
-      {/* Delete Confirmation Modal */}
+
+      <PaymentMethodModal
+        isOpen={showPaymentMethodModal}
+        onClose={() => setShowPaymentMethodModal(false)}
+        onSelectPaymentMethod={handlePaymentMethodSelect}
+      />
+
       <AnimatePresence>
         {showDeleteConfirm && (
           <motion.div
@@ -630,7 +866,6 @@ const CarDetails = () => {
                 <span className="font-bold text-red-500">{title}</span>?
               </p>
   
-              {/* Confirm Buttons */}
               <div className="flex justify-center gap-4">
                 <button
                   onClick={handleDeleteCar}
@@ -656,7 +891,6 @@ const CarDetails = () => {
         )}
       </AnimatePresence>
   
-      {/* Global Notification */}
       {notification.message && (
         <Notification
           message={notification.message}
@@ -665,13 +899,12 @@ const CarDetails = () => {
         />
       )}
   
-      {/* Create Car Owner Modal */}
       <CreateCarOwnerModal
         isOpen={showCreateCarOwnerModal}
         closeModal={() => setShowCreateCarOwnerModal(false)}
         onCreateSuccess={() => {
           setShowCreateCarOwnerModal(false);
-          handleBuyNow(); // Retry the purchase after becoming a car owner
+          handleBuyNow();
         }}
       />
     </div>

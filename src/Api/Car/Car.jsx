@@ -1,24 +1,26 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
-import { Link } from "react-router-dom"; // Import Link from react-router-dom
+import { Link } from "react-router-dom";
 import StarRating from "../../components/StarRating";
 import { BACKEND_URL } from "../../Constants/constant";
 import { motion, AnimatePresence } from "framer-motion";
-import { useDebounce } from "use-debounce"; // Install using `npm install use-debounce`
-import CreateCarModal from "./CreateCarModal"; // Import the CreateCarModal
-import UpdateCarModal from "./UpdateCarModal"; // Import the UpdateCarModal
-import { XMarkIcon, PencilSquareIcon } from "@heroicons/react/24/solid"; // For clear search button and edit icon
+import { useDebounce } from "use-debounce";
+import CreateCarModal from "./CreateCarModal";
+import UpdateCarModal from "./UpdateCarModal";
+import { XMarkIcon, PencilSquareIcon, TrashIcon } from "@heroicons/react/24/solid";
 import SkeletonLoader from "../../components/SkeletonLoader";
 
 const Car = () => {
   const [cars, setCars] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
-  const [debouncedQuery] = useDebounce(searchQuery, 300); // 300ms debounce
+  const [debouncedQuery] = useDebounce(searchQuery, 300);
   const [isCreateCarModalOpen, setIsCreateCarModalOpen] = useState(false);
   const [isUpdateCarModalOpen, setIsUpdateCarModalOpen] = useState(false);
-  const [selectedCar, setSelectedCar] = useState(null); // Car to update
-  const [notification, setNotification] = useState({ message: "", type: "" }); // For notifications
+  const [selectedCar, setSelectedCar] = useState(null);
+  const [notification, setNotification] = useState({ message: "", type: "" });
+  const [selectedCars, setSelectedCars] = useState([]); // Track selected cars for deletion
+  const [isDeleteMode, setIsDeleteMode] = useState(false); // Toggle delete mode
 
   const authToken = localStorage.getItem("authToken");
 
@@ -52,21 +54,68 @@ const Car = () => {
     );
   });
 
+  // Toggle car selection for deletion
+  const toggleCarSelection = (carId) => {
+    setSelectedCars(prev =>
+      prev.includes(carId)
+        ? prev.filter(id => id !== carId)
+        : [...prev, carId]
+    );
+  };
+
+  // Delete selected cars
+  const deleteSelectedCars = async () => {
+    if (selectedCars.length === 0) return;
+
+    try {
+      setLoading(true);
+      const authToken = localStorage.getItem("authToken");
+      
+      // Delete each selected car
+      await Promise.all(
+        selectedCars.map(carId =>
+          axios.delete(`${BACKEND_URL}/store/cars/${carId}/`, {
+            headers: {
+              Authorization: `Bearer ${authToken}`,
+            },
+          })
+        )
+      );
+
+      // Update the cars list
+      setCars(prev => prev.filter(car => !selectedCars.includes(car.id)));
+      setSelectedCars([]);
+      setIsDeleteMode(false);
+      
+      setNotification({
+        message: `${selectedCars.length} car(s) deleted successfully!`,
+        type: "success",
+      });
+    } catch (error) {
+      console.error("Error deleting cars:", error);
+      setNotification({
+        message: "Failed to delete cars. Please try again.",
+        type: "error",
+      });
+    } finally {
+      setLoading(false);
+      
+      // Clear notification after 5 seconds
+      setTimeout(() => {
+        setNotification({ message: "", type: "" });
+      }, 5000);
+    }
+  };
+
   // Handle successful car creation
   const handleCreateCarSuccess = (newCar) => {
-
-    
     setCars((prevCars) => [newCar, ...prevCars]);
-    setIsCreateCarModalOpen(false); // Close the modal
+    setIsCreateCarModalOpen(false);
     setNotification({
       message: "Car created successfully! 🎉",
       type: "success",
     });
-
-    // Clear notification after 5 seconds
-    setTimeout(() => {
-      setNotification({ message: "", type: "" });
-    }, 5000);
+    setTimeout(() => setNotification({ message: "", type: "" }), 5000);
   };
 
   // Handle successful car update
@@ -74,18 +123,13 @@ const Car = () => {
     setCars((prevCars) =>
       prevCars.map((car) => (car.id === updatedCar.id ? updatedCar : car))
     );
-    setIsUpdateCarModalOpen(false); // Close the modal
+    setIsUpdateCarModalOpen(false);
     setNotification({
       message: "Car updated successfully! 🎉",
       type: "success",
     });
-
-    // Clear notification after 5 seconds
-    setTimeout(() => {
-      setNotification({ message: "", type: "" });
-    }, 5000);
+    setTimeout(() => setNotification({ message: "", type: "" }), 5000);
   };
-
 
   return (
     <div className="bg-gradient-to-b from-blue-50 to-white min-h-screen p-8 flex flex-col items-center">
@@ -118,14 +162,14 @@ const Car = () => {
         🚗 Explore Our Cars
       </motion.h1>
 
-      {/* Search and Create Section */}
+      {/* Search and Action Buttons */}
       <motion.div
         className="w-full max-w-6xl flex flex-col md:flex-row justify-between items-center mb-12 gap-4"
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.3, duration: 0.5 }}
       >
-        {/* Search Input with Clear Button */}
+        {/* Search Input */}
         <div className="relative w-full md:w-1/3">
           <input
             type="text"
@@ -133,34 +177,63 @@ const Car = () => {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="px-4 py-3 w-full border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-400 focus:outline-none transition-all"
-            aria-label="Search for cars"
           />
           {searchQuery && (
             <button
               onClick={() => setSearchQuery("")}
               className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
-              aria-label="Clear search"
             >
               <XMarkIcon className="h-5 w-5" />
             </button>
           )}
         </div>
 
-        {/* Create Car Button */}
-        {authToken ? (
-          <motion.button
-            onClick={() => setIsCreateCarModalOpen(true)}
-            className="px-6 py-3 bg-blue-600 text-white text-lg font-semibold rounded-lg shadow-md hover:bg-blue-700 hover:shadow-lg transition-all duration-300"
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-          >
-            + Create Car
-          </motion.button>
-        ) : (
-          <p className="text-gray-500 text-sm italic">
-            Login to create a car
-          </p>
-        )}
+        {/* Action Buttons */}
+        <div className="flex gap-3">
+          {isDeleteMode ? (
+            <>
+              <button
+                onClick={deleteSelectedCars}
+                disabled={selectedCars.length === 0}
+                className={`px-4 py-3 rounded-lg shadow-md transition-all duration-300 ${
+                  selectedCars.length === 0
+                    ? "bg-gray-400 cursor-not-allowed"
+                    : "bg-red-600 hover:bg-red-700 text-white"
+                }`}
+              >
+                Delete ({selectedCars.length})
+              </button>
+              <button
+                onClick={() => {
+                  setIsDeleteMode(false);
+                  setSelectedCars([]);
+                }}
+                className="px-4 py-3 bg-gray-500 text-white rounded-lg shadow-md hover:bg-gray-600 transition-all duration-300"
+              >
+                Cancel
+              </button>
+            </>
+          ) : (
+            <>
+              {authToken && (
+                <>
+                  <button
+                    onClick={() => setIsDeleteMode(true)}
+                    className="px-4 py-3 bg-red-500 text-white rounded-lg shadow-md hover:bg-red-600 transition-all duration-300"
+                  >
+                    Delete Cars
+                  </button>
+                  <button
+                    onClick={() => setIsCreateCarModalOpen(true)}
+                    className="px-6 py-3 bg-blue-600 text-white text-lg font-semibold rounded-lg shadow-md hover:bg-blue-700 hover:shadow-lg transition-all duration-300"
+                  >
+                    + Create Car
+                  </button>
+                </>
+              )}
+            </>
+          )}
+        </div>
       </motion.div>
 
       {/* Loading Spinner */}
@@ -176,30 +249,107 @@ const Car = () => {
             transition={{ delay: index * 0.05, duration: 0.3 }}
             className="w-full"
           >
-            <div className="relative bg-white rounded-2xl overflow-hidden shadow-xl cursor-pointer group transform transition-all duration-300 border border-gray-100 hover:shadow-2xl hover:border-blue-200">
-              {/* Car Image with Link */}
-              <Link to={`/cars/${car.id}`}>
-                <motion.div
-                  className="relative w-full h-[300px] flex justify-center items-center bg-blue-50"
-                  whileHover={{ scale: 1.02 }} // Subtle scale effect on hover
-                >
-                  <img
-                    className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-                    src={car.image || "https://via.placeholder.com/300?text=No+Image"}
-                    alt={car.title}
-                  />
+            <div className={`relative bg-white rounded-2xl overflow-hidden shadow-xl cursor-pointer group transform transition-all duration-300 border ${
+              selectedCars.includes(car.id) 
+                ? "border-red-500 ring-2 ring-red-500" 
+                : "border-gray-100 hover:border-blue-200"
+            } hover:shadow-2xl`}>
 
-                  {/* Overlay on Hover */}
-                  <div className="absolute inset-0 bg-black bg-opacity-50 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-center items-center text-white px-4">
-                    <div className="text-2xl font-bold mb-2">{car.title}</div>
-                    <div className="text-lg mb-2">${car.price}</div>
-                    <StarRating rating={parseFloat(car.average_rating)} />
-                    <div className="text-sm text-blue-300 mt-2">
-                      {car.carowner ? car.carowner.name : "Not Owned Yet"}
-                    </div>
-                  </div>
-                </motion.div>
-              </Link>
+
+{isDeleteMode ? (
+  <div 
+    className={`relative cursor-pointer ${selectedCars.includes(car.id) ? 'ring-2 ring-green-500' : ''} ${
+      [8, 9, 10].includes(car.id) ? 'cursor-not-allowed opacity-70' : ''
+    }`}
+    onClick={() => ![8, 9, 10].includes(car.id) && toggleCarSelection(car.id)}
+  >
+    {/* Checkbox in top-left corner */}
+    <div className="absolute top-2 left-2 z-10">
+      <div className={`flex items-center justify-center w-8 h-8 rounded-full transition-all duration-200 ${
+        selectedCars.includes(car.id) 
+          ? "bg-green-500" 
+          : [8, 9, 10].includes(car.id) 
+            ? "bg-gray-300 border-2 border-gray-400" 
+            : "bg-white/80 border-2 border-gray-300"
+      }`}>
+        {selectedCars.includes(car.id) && (
+          <svg 
+            className="w-5 h-5 text-white"
+            fill="none" 
+            stroke="currentColor" 
+            viewBox="0 0 24 24"
+          >
+            <path 
+              strokeLinecap="round" 
+              strokeLinejoin="round" 
+              strokeWidth={3} 
+              d="M5 13l4 4L19 7" 
+            />
+          </svg>
+        )}
+        {[8, 9, 10].includes(car.id) && (
+          <svg 
+            className="w-4 h-4 text-gray-600"
+            fill="none" 
+            stroke="currentColor" 
+            viewBox="0 0 24 24"
+          >
+            <path 
+              strokeLinecap="round" 
+              strokeLinejoin="round" 
+              strokeWidth={3} 
+              d="M6 18L18 6M6 6l12 12" 
+            />
+          </svg>
+        )}
+      </div>
+    </div>
+
+    {/* Car Image and Content */}
+    <motion.div
+      className="relative w-full h-[300px] flex justify-center items-center bg-blue-50"
+      whileHover={{ scale: ![8, 9, 10].includes(car.id) ? 1.02 : 1 }}
+    >
+      <img
+        className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+        src={car.image || "https://via.placeholder.com/300?text=No+Image"}
+        alt={car.title}
+      />
+      <div className="absolute inset-0 bg-black bg-opacity-50 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-center items-center text-white px-4">
+        <div className="text-2xl font-bold mb-2">{car.title}</div>
+        <div className="text-sm text-blue-300 mt-2">
+          {car.carowner ? `Owned by ${car.carowner.name}` : "Not Owned Yet"}
+        </div>
+        {[8, 9, 10].includes(car.id) && (
+          <div className="text-red-300 text-sm mt-2">
+            This car cannot be deleted
+          </div>
+        )}
+      </div>
+    </motion.div>
+  </div>
+) : (
+  <Link to={`/cars/${car.id}`}>
+    <motion.div
+      className="relative w-full h-[300px] flex justify-center items-center bg-blue-50"
+      whileHover={{ scale: 1.02 }}
+    >
+      <img
+        className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+        src={car.image || "https://via.placeholder.com/300?text=No+Image"}
+        alt={car.title}
+      />
+      <div className="absolute inset-0 bg-black bg-opacity-50 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-center items-center text-white px-4">
+        <div className="text-2xl font-bold mb-2">{car.title}</div>
+        <div className="text-lg mb-2">${car.price}</div>
+        <StarRating rating={parseFloat(car.average_rating)} />
+        <div className="text-sm text-blue-300 mt-2">
+          {car.carowner ? `Owned by ${car.carowner.name}` : "Not Owned Yet"}
+        </div>
+      </div>
+    </motion.div>
+  </Link>
+)}
 
               {/* Bottom Info */}
               <div className="p-4 bg-gradient-to-r from-blue-100 to-white">
@@ -211,8 +361,8 @@ const Car = () => {
                 </div>
               </div>
 
-              {/* Update Button */}
-              {authToken && ![8, 9, 10].includes(car.id) && (
+              {/* Update Button (hidden in delete mode) */}
+              {authToken && ![8, 9, 10].includes(car.id) && !isDeleteMode && (
                 <button
                   onClick={() => {
                     setSelectedCar(car);

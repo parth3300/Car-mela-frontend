@@ -4,6 +4,7 @@ import { motion } from "framer-motion";
 import { BACKEND_URL } from "../../Constants/constant";
 import Notification from "../../components/Globle/Notification";
 import { jwtDecode } from "jwt-decode";
+import { XMarkIcon } from "@heroicons/react/24/solid";
 
 const CarownerModal = ({ isOpen, closeModal, carowner, onDeleteSuccess }) => {
   const [loading, setLoading] = useState(false);
@@ -14,11 +15,19 @@ const CarownerModal = ({ isOpen, closeModal, carowner, onDeleteSuccess }) => {
   });
 
   const authToken = localStorage.getItem("authToken");
-  let user_id = "";
-  if (authToken) {
-    let decoded = jwtDecode(authToken);
-    user_id = decoded?.user_id;
-  }
+  const [userId, setUserId] = useState("");
+
+  // Get user ID from token
+  useEffect(() => {
+    if (authToken) {
+      try {
+        const decoded = jwtDecode(authToken);
+        setUserId(decoded?.user_id || "");
+      } catch (error) {
+        console.error("JWT decode error:", error);
+      }
+    }
+  }, [authToken]);
 
   // Ref for the modal container
   const modalRef = useRef(null);
@@ -27,16 +36,14 @@ const CarownerModal = ({ isOpen, closeModal, carowner, onDeleteSuccess }) => {
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (modalRef.current && !modalRef.current.contains(event.target)) {
-        closeModal(); // Close the modal if clicked outside
+        closeModal();
       }
     };
 
-    // Add event listener when the modal is mounted
     if (isOpen) {
       document.addEventListener("mousedown", handleClickOutside);
     }
 
-    // Clean up the event listener when the modal is unmounted
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
@@ -54,19 +61,16 @@ const CarownerModal = ({ isOpen, closeModal, carowner, onDeleteSuccess }) => {
     }
 
     setLoading(true);
-    console.log("Starting DELETE request for car owner...");
 
     try {
-      const url = `${BACKEND_URL}/store/carowners/${carowner.id}/`;
-      console.log("DELETE URL:", url);
-
-      const response = await axios.delete(url, {
-        headers: {
-          Authorization: `Bearer ${authToken}`,
-        },
-      });
-
-      console.log("DELETE successful:", response.status);
+      const response = await axios.delete(
+        `${BACKEND_URL}/store/carowners/${carowner.id}/`,
+        {
+          headers: {
+            Authorization: `Bearer ${authToken}`,
+          },
+        }
+      );
 
       setNotification({
         message: "Car owner successfully removed!",
@@ -79,9 +83,10 @@ const CarownerModal = ({ isOpen, closeModal, carowner, onDeleteSuccess }) => {
 
       closeModal();
     } catch (error) {
-      console.error("DELETE failed:", error.response || error);
+      console.error("DELETE failed:", error);
       setNotification({
-        message: "Failed to remove car owner. Please try again.",
+        message: error.response?.data?.message || 
+               "Failed to remove car owner. Please try again.",
         type: "error",
       });
     } finally {
@@ -95,7 +100,7 @@ const CarownerModal = ({ isOpen, closeModal, carowner, onDeleteSuccess }) => {
       {/* Modal Overlay */}
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
         <motion.div
-          ref={modalRef} // Attach the ref to the modal container
+          ref={modalRef}
           className="bg-white rounded-2xl p-8 w-full max-w-md shadow-lg relative overflow-y-auto"
           initial={{ scale: 0.8, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
@@ -105,18 +110,19 @@ const CarownerModal = ({ isOpen, closeModal, carowner, onDeleteSuccess }) => {
           {/* Close Button */}
           <button
             onClick={closeModal}
-            className="absolute top-4 right-4 text-gray-500 hover:text-gray-700 text-xl"
+            className="absolute top-4 right-4 text-gray-500 hover:text-gray-700"
             disabled={loading}
           >
-            &times;
+            <XMarkIcon className="h-6 w-6" />
           </button>
 
-          {/* Car Owner Name */}
-          <h2 className="text-2xl font-bold text-blue-800 text-center mb-6">
-            {carowner.name}
-          </h2>
+          {/* Car Owner Header */}
+          <div className="text-center mb-6">
+            <h2 className="text-2xl font-bold text-blue-800">{carowner.name}</h2>
+            <p className="text-gray-500">{carowner.email}</p>
+          </div>
 
-          {/* Car Owner Profile Pic */}
+          {/* Profile Image */}
           <div className="flex justify-center mb-6">
             <img
               src={
@@ -124,51 +130,33 @@ const CarownerModal = ({ isOpen, closeModal, carowner, onDeleteSuccess }) => {
                 "https://via.placeholder.com/150?text=No+Image"
               }
               alt={carowner.name}
-              className="rounded-full object-cover w-32 h-32 border-4 border-blue-500 shadow-md"
+              className="rounded-full object-cover w-32 h-32 border-4 border-blue-100 shadow-md"
             />
           </div>
 
-          {/* Car Owner Details */}
-          <div className="space-y-4 text-gray-700">
+          {/* Details Section */}
+          <div className="space-y-4 text-gray-700 mb-6">
             <div className="flex justify-between">
-              <span className="font-semibold">Email:</span>
-              <span>{carowner.email || "N/A"}</span>
-            </div>
-            <div className="flex justify-between">
-                <span className="font-semibold">Contact:</span>
-                <span>
+              <span className="font-semibold">Contact:</span>
+              <span>
                 {carowner.dial_code && carowner.phone_number
                   ? `+${carowner.dial_code} ${carowner.phone_number}`
                   : "N/A"}
-                </span>            
-          </div>
+              </span>
+            </div>
             <div className="flex justify-between">
-              <span className="font-semibold">Total Cars:</span>
+              <span className="font-semibold">Balance:</span>
+              <span>₹{carowner.balance?.toLocaleString() || "0"}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="font-semibold">Cars Owned:</span>
               <span>{carowner.cars_count || 0}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="font-semibold">Total Balance:</span>
-              <span>{carowner.balance || 0}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="font-semibold">Cars:</span>
-              <div className="flex flex-col items-end">
-                {carowner.cars.length > 0 ? (
-                  carowner.cars.map((car) => (
-                    <span key={car.id} className="text-gray-600">
-                      {car}
-                    </span>
-                  ))
-                ) : (
-                  <span className="text-gray-600">No cars found</span>
-                )}
-              </div>
             </div>
           </div>
 
-          {/* Action Buttons */}
-          <div className="flex justify-center space-x-4 mt-8">
-            {authToken && user_id && user_id === carowner?.user ? (
+          {/* Delete Button (only show if current user owns this profile) */}
+          {userId && userId === carowner.user && (
+            <div className="flex justify-center mt-6">
               <button
                 onClick={() => setShowConfirm(true)}
                 disabled={loading}
@@ -178,14 +166,10 @@ const CarownerModal = ({ isOpen, closeModal, carowner, onDeleteSuccess }) => {
                     : "bg-red-600 hover:bg-red-700"
                 } text-white`}
               >
-                Delete
+                Delete Profile
               </button>
-            ) : (
-              <p className="text-sm text-gray-500 italic">
-                You can not delete this car owner
-              </p>
-            )}
-          </div>
+            </div>
+          )}
 
           {/* Confirm Delete Modal */}
           {showConfirm && (
@@ -196,12 +180,10 @@ const CarownerModal = ({ isOpen, closeModal, carowner, onDeleteSuccess }) => {
                 className="bg-white rounded-xl shadow-xl p-6 w-full max-w-sm text-center"
               >
                 <h3 className="text-lg font-semibold text-gray-800 mb-4">
-                  Confirm Removal
+                  Confirm Profile Deletion
                 </h3>
                 <p className="text-gray-600 mb-6">
-                  Are you sure you want to remove{" "}
-                  <span className="font-bold text-red-500">{carowner.name}</span>
-                  ?
+                  This will permanently delete your car owner profile and all associated data.
                 </p>
 
                 <div className="flex justify-center gap-4">
@@ -214,7 +196,7 @@ const CarownerModal = ({ isOpen, closeModal, carowner, onDeleteSuccess }) => {
                         : "bg-red-600 hover:bg-red-700"
                     } transition-all`}
                   >
-                    {loading ? "Processing..." : "Yes, Delete"}
+                    {loading ? "Deleting..." : "Confirm Delete"}
                   </button>
                   <button
                     onClick={() => setShowConfirm(false)}
@@ -230,16 +212,14 @@ const CarownerModal = ({ isOpen, closeModal, carowner, onDeleteSuccess }) => {
         </motion.div>
       </div>
 
-      {/* Global Notification */}
-      {notification.message && (
-        <Notification
-          message={notification.message}
-          type={notification.type}
-          onClose={() => setNotification({ message: "", type: "" })}
-        />
-      )}
+      {/* Notification */}
+      <Notification
+        message={notification.message}
+        type={notification.type}
+        onClose={() => setNotification({ message: "", type: "" })}
+      />
     </>
   );
 };
 
-export default CarownerModal; 
+export default CarownerModal;

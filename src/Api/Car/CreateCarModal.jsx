@@ -19,8 +19,9 @@ const FUEL_CHOICES = [
   { value: "CNG", label: "CNG" }
 ];
 
-const CreateCarModal = ({ isOpen, closeModal, onCreateSuccess }) => {
-  const [formData, setFormData] = useState({
+const CreateCarModal = ({ isOpen, closeModal, onCreateSuccess, carOwnerId }) => {
+  // Initialize empty form data
+  const initialFormData = {
     title: "",
     company: "",
     carmodel: "",
@@ -31,8 +32,9 @@ const CreateCarModal = ({ isOpen, closeModal, onCreateSuccess }) => {
     description: "",
     price: "",
     ratings: "",
-  });
+  };
 
+  const [formData, setFormData] = useState(initialFormData);
   const [file, setFile] = useState(null);
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
@@ -49,29 +51,20 @@ const CreateCarModal = ({ isOpen, closeModal, onCreateSuccess }) => {
   const modalRef = useRef(null);
   const companyModalRef = useRef(null);
 
-  // Close modal when clicking outside
+  // Reset form when modal opens
   useEffect(() => {
-    const handleClickOutside = (event) => {
-      // Check if the click is outside the CreateCarModal and CreateCompanyModal
-      if (
-        modalRef.current &&
-        !modalRef.current.contains(event.target) &&
-        (!showCompanyModal || !companyModalRef.current?.contains(event.target))
-      ) {
-        closeModal();
-      }
-    };
-
-    // Attach the event listener only if the CreateCompanyModal is not open
-    if (!showCompanyModal) {
-      document.addEventListener("mousedown", handleClickOutside);
+    if (isOpen) {
+      setFormData(initialFormData);
+      setFile(null);
+      setMessage("");
+      setSearchCompanyQuery("");
+      setSearchColorQuery("");
+      setColorSuggestions([]);
+      setCompanySuggestions([]);
+      setHighlightedCompanyIndex(-1);
+      setHighlightedColorIndex(-1);
     }
-
-    // Cleanup the event listener
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, [closeModal, showCompanyModal]); // Add showCompanyModal as a dependency
+  }, [isOpen]);
 
   useEffect(() => {
     const fetchCompanies = async () => {
@@ -84,15 +77,17 @@ const CreateCarModal = ({ isOpen, closeModal, onCreateSuccess }) => {
       }
     };
 
-    fetchCompanies();
-  }, []);
+    if (isOpen) {
+      fetchCompanies();
+    }
+  }, [isOpen]);
 
   const companiy_titles = companies.map((company) => company.title.toLowerCase());
 
   const handleCompanySearchChange = (e) => {
     const query = e.target.value;
     setSearchCompanyQuery(query);
-    setHighlightedCompanyIndex(-1); // Reset highlighted index
+    setHighlightedCompanyIndex(-1);
 
     if (query) {
       const filteredCompanies = companies.filter((company) =>
@@ -114,13 +109,11 @@ const CreateCarModal = ({ isOpen, closeModal, onCreateSuccess }) => {
     }
   };
 
-  // Handle company keydown events (arrow navigation)
   const handleCompanyKeyDown = (e) => {
     if (e.key === "Enter") {
       e.preventDefault();
       const query = searchCompanyQuery.trim().toLowerCase();
 
-      // If there are suggestions, select the first one
       if (companySuggestions.length > 0) {
         const firstSuggestion = companySuggestions[0];
         handleCompanySelect(firstSuggestion);
@@ -128,10 +121,8 @@ const CreateCarModal = ({ isOpen, closeModal, onCreateSuccess }) => {
         console.log(query);
         handleCompanySelect(query);
       } else if (query) {
-        // If no suggestions and the query is not empty, open the CreateCompanyModal
         setShowCompanyModal(true);
       } else {
-        // If the input is empty, show all companies
         setCompanySuggestions(companies);
       }
     } else if (e.key === "ArrowDown") {
@@ -150,7 +141,7 @@ const CreateCarModal = ({ isOpen, closeModal, onCreateSuccess }) => {
   const handleColorSearchChange = (e) => {
     const query = e.target.value;
     setSearchColorQuery(query);
-    setHighlightedColorIndex(-1); // Reset highlighted index
+    setHighlightedColorIndex(-1);
 
     if (query) {
       const filteredColors = colorNames.filter((color) =>
@@ -200,6 +191,21 @@ const CreateCarModal = ({ isOpen, closeModal, onCreateSuccess }) => {
     setFile(e.target.files[0]);
   };
 
+  const getCookie = (name) => {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== "") {
+      const cookies = document.cookie.split(";");
+      for (let i = 0; i < cookies.length; i++) {
+        const cookie = cookies[i].trim();
+        if (cookie.substring(0, name.length + 1) === name + "=") {
+          cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+          break;
+        }
+      }
+    }
+    return cookieValue;
+  };
+  
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -235,6 +241,7 @@ const CreateCarModal = ({ isOpen, closeModal, onCreateSuccess }) => {
     data.append("description", formData.description);
     data.append("price", formData.price);
     data.append("ratings", formData.ratings);
+    data.append("carowner", carOwnerId);
 
     try {
       const response = await axios.post(`${BACKEND_URL}/store/cars/`, data, {
@@ -246,19 +253,11 @@ const CreateCarModal = ({ isOpen, closeModal, onCreateSuccess }) => {
 
       setMessage("✅ Car created successfully!");
 
-      setFormData({
-        title: "",
-        company: "",
-        carmodel: "",
-        color: "",
-        registration_year: "",
-        fuel_type: "",
-        mileage: "",
-        description: "",
-        price: "",
-        ratings: "",
-      });
+      // Reset form after successful submission
+      setFormData(initialFormData);
       setFile(null);
+      setSearchCompanyQuery("");
+      setSearchColorQuery("");
 
       if (onCreateSuccess) {
         onCreateSuccess(response.data);
@@ -267,6 +266,21 @@ const CreateCarModal = ({ isOpen, closeModal, onCreateSuccess }) => {
       setTimeout(() => {
         closeModal();
       }, 2000);
+
+      // Proceed with car purchase
+      const csrfToken = getCookie("csrftoken");
+
+      const purchaseData = new FormData();
+      purchaseData.append("csrfmiddlewaretoken", csrfToken);
+      purchaseData.append("car", response.data.id);
+      purchaseData.append("carowner", carOwnerId);
+
+      await axios.post(`${BACKEND_URL}/store/carownerships/`, purchaseData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+          Authorization: `Bearer ${authToken}`,
+        },
+      });
     } catch (error) {
       console.error("❌ Error creating car:", error);
 
@@ -293,11 +307,32 @@ const CreateCarModal = ({ isOpen, closeModal, onCreateSuccess }) => {
       setCompanies((prev) => [...prev, newCompany]);
       setFormData((prev) => ({ ...prev, company: newCompany.id }));
       setSearchCompanyQuery(newCompany.title);
-      setShowCompanyModal(false); // Close the modal
+      setShowCompanyModal(false);
     } else {
       setMessage("❌ Failed to create company.");
     }
   };
+
+  // Close modal when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (
+        modalRef.current &&
+        !modalRef.current.contains(event.target) &&
+        (!showCompanyModal || !companyModalRef.current?.contains(event.target))
+      ) {
+        closeModal();
+      }
+    };
+
+    if (!showCompanyModal) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [closeModal, showCompanyModal]);
 
   return (
     <>
@@ -315,7 +350,7 @@ const CreateCarModal = ({ isOpen, closeModal, onCreateSuccess }) => {
               initial={{ scale: 0.8, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.8, opacity: 0 }}
-              style={{ maxHeight: "90vh", overflowY: "auto" }} // Add scrollbar
+              style={{ maxHeight: "90vh", overflowY: "auto" }}
             >
               <button
                 onClick={() => {
@@ -332,7 +367,6 @@ const CreateCarModal = ({ isOpen, closeModal, onCreateSuccess }) => {
               </h2>
 
               <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-                {/* Form fields go here */}
                 <div className="w-full">
                   <label className="block text-gray-700">Car Image:</label>
                   <input
@@ -482,10 +516,10 @@ const CreateCarModal = ({ isOpen, closeModal, onCreateSuccess }) => {
                         onChange={handleChange}
                         onInput={(e) => {
                           if (e.target.value.length > 2) {
-                            e.target.value = e.target.value.slice(0, 2); // trim to 2 digits
+                            e.target.value = e.target.value.slice(0, 2);
                           }
                         }}
-                        max="99" // Optional but reinforces the limit
+                        max="99"
                         className="w-full p-2 border rounded-md"
                         required
                       />
@@ -498,6 +532,11 @@ const CreateCarModal = ({ isOpen, closeModal, onCreateSuccess }) => {
                         name="price"
                         value={formData.price}
                         onChange={handleChange}
+                        onInput={(e) => {
+                          if (e.target.value.length > 2) {
+                            e.target.value = e.target.value.slice(0, 6);
+                          }
+                        }}
                         className="w-full p-2 border rounded-md"
                         required
                       />
@@ -561,7 +600,6 @@ const CreateCarModal = ({ isOpen, closeModal, onCreateSuccess }) => {
         )}
       </AnimatePresence>
 
-      {/* CreateCompanyModal with smooth closing */}
       <AnimatePresence>
         {showCompanyModal && (
           <CreateCompanyModal
@@ -569,7 +607,7 @@ const CreateCarModal = ({ isOpen, closeModal, onCreateSuccess }) => {
             onClose={() => setShowCompanyModal(false)}
             onCreated={handleCompanyCreated}
             modalRef={companyModalRef}
-            initialTitle={searchCompanyQuery} // Pass the search query as the initial title
+            initialTitle={searchCompanyQuery}
           />
         )}
       </AnimatePresence>

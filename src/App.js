@@ -13,6 +13,10 @@ import NotFound from "./components/NotFound";
 import Login from "./components/Login";
 import { AuthProvider, useAuth } from "./context/AuthContext";  // ✅ Import Auth Context
 import Footer from "./components/Footer";
+import PaymentSuccess from "./components/PaymentSuccess";
+import PaymentCanceled from "./components/PaymentCanceled";
+import Support from "./components/Support";
+import Customers from "./Api/Customers/Customer";
 
 const AuthRedirect = ({ children }) => {
   const { user } = useAuth();
@@ -21,7 +25,8 @@ const AuthRedirect = ({ children }) => {
 
 function App() {
   return (
-    <AuthProvider>  {/* ✅ Wrap entire app with AuthProvider */}
+    <AuthProvider>
+            {/* ✅ Wrap entire app with AuthProvider */}
       <Router>
         <Navbar />
         <div className="flex flex-col min-h-screen">
@@ -31,7 +36,11 @@ function App() {
           <Route path="/cars/:id" element={<CarDetails />} />
           <Route path="/companies" element={<CompanyList />} />
           <Route path="/carowners" element={<Carowners />} />
+          <Route path="/customers" element={<Customers />} />
           <Route path="/dealerships" element={<DealershipList />} />
+          <Route path="/payment-success" element={<PaymentSuccess />} />
+          <Route path="/payment-canceled" element={<PaymentCanceled />} />
+          <Route path="/support" element={<Support />} />
           
           {/* Redirect logged-in users from Login & Signup */}
           <Route path="/signup" element={<AuthRedirect><Signup /></AuthRedirect>} />
@@ -42,6 +51,7 @@ function App() {
           
         </Routes>
         <Footer /> {/* Add the Footer component here */}
+
       </div>
       </Router>
     </AuthProvider>

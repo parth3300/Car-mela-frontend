@@ -3,11 +3,12 @@ import axios from "axios";
 import CompanyModal from "./CompanyModal";
 import CreateCompanyModal from "./CreateCompanyModal";
 import { BACKEND_URL } from "../../Constants/constant";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import Notification from "../../components/Globle/Notification";
-import UpdateCompanyModal from "./UpdateCompanyModal.jsx";
-import { PencilSquareIcon } from "@heroicons/react/24/solid"; // For edit icon
-import SkeletonLoader from "../../components/SkeletonLoader.jsx";
+import UpdateCompanyModal from "./UpdateCompanyModal";
+import { PencilSquareIcon } from "@heroicons/react/24/solid";
+import SkeletonLoader from "../../components/SkeletonLoader";
+
 
 const Company = () => {
   const [companies, setCompanies] = useState([]);
@@ -15,12 +16,15 @@ const Company = () => {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false); // State for UpdateCompanyModal visibility
-  const [companyToUpdate, setCompanyToUpdate] = useState(null); // State to store the company to update
+  const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false);
+  const [companyToUpdate, setCompanyToUpdate] = useState(null);
   const [notification, setNotification] = useState({
     message: "",
     type: "",
   });
+  const [processing, setProcessing] = useState(false);
+  const [deleteProcessing, setDeleteProcessing] = useState(false);
+  const [updateProcessing, setUpdateProcessing] = useState(false);
 
   const authToken = localStorage.getItem("authToken");
 
@@ -44,22 +48,20 @@ const Company = () => {
     fetchData();
   }, []);
 
-  const openModal = (company) => {
-    setSelectedCompany(company);
-  };
-
-  const closeModal = () => {
-    setSelectedCompany(null);
-  };
-
   const handleDeleteSuccess = (deletedCompanyId) => {
     setCompanies((prevCompanies) =>
       prevCompanies.filter((company) => company.id !== deletedCompanyId)
     );
-    closeModal();
+    setSelectedCompany(null);
+    setNotification({
+      message: "Company deleted successfully!",
+      type: "success",
+    });
+    setDeleteProcessing(false);
   };
 
   const handleCreateCompany = async () => {
+    setProcessing(true);
     try {
       const response = await axios.get(`${BACKEND_URL}/store/companies/`);
       setCompanies(response.data);
@@ -67,13 +69,15 @@ const Company = () => {
         message: "Company created successfully! 🎉",
         type: "success",
       });
-      setIsCreateModalOpen(false); // Close the modal after successful creation
+      setIsCreateModalOpen(false);
     } catch (error) {
-      console.error("Error fetching companies:", error);
+      console.error("Error creating company:", error);
       setNotification({
         message: "Failed to create company. Please try again.",
         type: "error",
       });
+    } finally {
+      setProcessing(false);
     }
   };
 
@@ -83,11 +87,12 @@ const Company = () => {
         company.id === updatedCompany.id ? updatedCompany : company
       )
     );
-    setIsUpdateModalOpen(false); // Close the modal after successful update
+    setIsUpdateModalOpen(false);
     setNotification({
       message: "Company updated successfully! 🎉",
       type: "success",
     });
+    setUpdateProcessing(false);
   };
 
   const filteredCompanies = companies.filter((company) =>
@@ -125,7 +130,7 @@ const Company = () => {
         {/* Create Company Button */}
         {authToken ? (
           <motion.button
-            onClick={() => setIsCreateModalOpen(true)} // Open CreateCompanyModal
+            onClick={() => setIsCreateModalOpen(true)}
             className="px-6 py-3 bg-blue-600 text-white text-lg font-semibold rounded-lg shadow-md hover:bg-blue-700 hover:shadow-lg transition-all duration-300"
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
@@ -154,7 +159,7 @@ const Company = () => {
               transition={{ delay: index * 0.05, duration: 0.3 }}
             >
               <div
-                onClick={() => openModal(company)}
+                onClick={() => setSelectedCompany(company)}
                 className="relative bg-white rounded-2xl overflow-hidden shadow-xl cursor-pointer group transform transition-all duration-300 border border-gray-100"
               >
                 {/* Company Logo */}
@@ -183,9 +188,9 @@ const Company = () => {
                 {authToken && ![28, 29, 30].includes(company.id) && (
                   <button
                     onClick={(e) => {
-                      e.stopPropagation(); // Prevent opening the details modal
-                      setCompanyToUpdate(company); // Set the company to update
-                      setIsUpdateModalOpen(true); // Open the update modal
+                      e.stopPropagation();
+                      setCompanyToUpdate(company);
+                      setIsUpdateModalOpen(true);
                     }}
                     className="absolute bottom-4 right-4 p-2 bg-blue-600 text-white rounded-full hover:bg-blue-700 transition-all"
                   >
@@ -209,42 +214,56 @@ const Company = () => {
         </motion.div>
       )}
 
-      {/* Company Modal */}
-      {selectedCompany && (
-        <CompanyModal
-          isOpen={!!selectedCompany}
-          closeModal={closeModal}
-          company={selectedCompany}
-          onDeleteSuccess={handleDeleteSuccess}
-        />
-      )}
+      {/* Company Details Modal */}
+      <AnimatePresence>
+        {selectedCompany && (
+          <CompanyModal
+            isOpen={!!selectedCompany}
+            closeModal={() => !deleteProcessing && setSelectedCompany(null)}
+            company={selectedCompany}
+            onDeleteSuccess={handleDeleteSuccess}
+            processing={deleteProcessing}
+            setProcessing={setDeleteProcessing}
+          />
+        )}
+      </AnimatePresence>
 
       {/* Create Company Modal */}
-      {isCreateModalOpen && (
-        <CreateCompanyModal
-          onClose={() => setIsCreateModalOpen(false)}
-          onCreated={handleCreateCompany}
-        />
-      )}
+      <AnimatePresence>
+        {isCreateModalOpen && (
+          <CreateCompanyModal
+            isOpen={isCreateModalOpen}
+            onClose={() => !processing && setIsCreateModalOpen(false)}
+            onCreated={handleCreateCompany}
+            processing={processing}
+          />
+        )}
+      </AnimatePresence>
 
       {/* Update Company Modal */}
-      {isUpdateModalOpen && (
-        <UpdateCompanyModal
-          isOpen={isUpdateModalOpen}
-          onClose={() => setIsUpdateModalOpen(false)}
-          company={companyToUpdate} // Pass the company to update directly
-          onUpdateSuccess={handleUpdateSuccess}
-        />
-      )}
+      <AnimatePresence>
+        {isUpdateModalOpen && (
+          <UpdateCompanyModal
+            isOpen={isUpdateModalOpen}
+            onClose={() => !updateProcessing && setIsUpdateModalOpen(false)}
+            company={companyToUpdate}
+            onUpdateSuccess={handleUpdateSuccess}
+            processing={updateProcessing}
+            setProcessing={setUpdateProcessing}
+          />
+        )}
+      </AnimatePresence>
 
       {/* Notification */}
-      {notification.message && (
-        <Notification
-          message={notification.message}
-          type={notification.type}
-          onClose={() => setNotification({ message: "", type: "" })}
-        />
-      )}
+      <AnimatePresence>
+        {notification.message && (
+          <Notification
+            message={notification.message}
+            type={notification.type}
+            onClose={() => setNotification({ message: "", type: "" })}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 };
