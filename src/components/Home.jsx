@@ -212,8 +212,8 @@ const Home = () => {
                   alt={car.title}
                   className="w-full h-48 object-cover"
                 />
-                <div className="p-6">
-                  <h3 className="text-2xl font-semibold mb-2">{car.title}</h3>
+<div className="p-4 flex flex-col h-[250px]"> 
+<h3 className="text-2xl font-semibold mb-2">{car.title}</h3>
                   <p className="text-gray-600 mb-4">{car.description}</p>
                   <ButtonStart
                     className="w-full bg-gradient-to-r from-blue-600 to-blue-500 text-white rounded-lg py-2 hover:from-blue-700 hover:to-blue-600 transition-all"

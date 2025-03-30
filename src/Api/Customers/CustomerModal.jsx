@@ -91,7 +91,7 @@ const CustomerModal = ({
               <EnvelopeIcon className="h-5 w-5 text-gray-500 mr-3 mt-1" />
               <div>
                 <p className="text-sm font-medium text-gray-500">Email</p>
-                <p className="text-gray-800">{customer.user.email}</p>
+                <p className="text-gray-800">{customer.email}</p>
               </div>
             </div>
 
