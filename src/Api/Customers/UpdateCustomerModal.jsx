@@ -134,7 +134,8 @@ const UpdateCustomerModal = ({
   customer,
   closeModal,
   onUpdateSuccess,
-  setNotification,
+  processing,
+  setProcessing,
 }) => {
   const [formData, setFormData] = useState({
     dial_code: "+91",
@@ -142,7 +143,6 @@ const UpdateCustomerModal = ({
     profile_pic: null
   });
   const [previewImage, setPreviewImage] = useState(null);
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   
   const fileInputRef = useRef(null);
@@ -202,7 +202,7 @@ const UpdateCustomerModal = ({
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setLoading(true);
+    setProcessing(true);
     setError("");
 
     try {
@@ -230,10 +230,6 @@ const UpdateCustomerModal = ({
       );
 
       onUpdateSuccess(response.data);
-      setNotification({
-        message: "Customer updated successfully!",
-        type: "success",
-      });
       closeModal();
     } catch (error) {
       console.error("Error updating customer:", error);
@@ -250,12 +246,8 @@ const UpdateCustomerModal = ({
       }
       
       setError(errorMessage);
-      setNotification({
-        message: errorMessage,
-        type: "error",
-      });
     } finally {
-      setLoading(false);
+      setProcessing(false);
     }
   };
 
@@ -274,7 +266,11 @@ const UpdateCustomerModal = ({
       >
         <div className="flex justify-between items-center p-6 border-b">
           <h3 className="text-xl font-bold text-gray-800">Update Customer</h3>
-          <button onClick={closeModal} className="text-gray-500 hover:text-gray-700">
+          <button 
+            onClick={closeModal} 
+            className="text-gray-500 hover:text-gray-700"
+            disabled={processing}
+          >
             <XMarkIcon className="h-6 w-6" />
           </button>
         </div>
@@ -304,6 +300,7 @@ const UpdateCustomerModal = ({
                   type="button"
                   onClick={() => fileInputRef.current.click()}
                   className="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-md text-sm transition-colors"
+                  disabled={processing}
                 >
                   {formData.profile_pic ? "Change Photo" : "Upload Photo"}
                 </button>
@@ -317,6 +314,7 @@ const UpdateCustomerModal = ({
                 onChange={handleFileChange}
                 accept="image/*"
                 className="hidden"
+                disabled={processing}
               />
             </div>
           </div>
@@ -339,6 +337,7 @@ const UpdateCustomerModal = ({
                 className="flex-1 min-w-0 block w-full px-3 py-2 rounded-none rounded-r-md border border-gray-300 focus:ring-blue-500 focus:border-blue-500"
                 required
                 maxLength={15}
+                disabled={processing}
               />
             </div>
           </div>
@@ -353,16 +352,17 @@ const UpdateCustomerModal = ({
             <button
               type="button"
               onClick={closeModal}
-              className="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+              disabled={processing}
+              className="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
             >
               Cancel
             </button>
             <button
               type="submit"
-              disabled={loading}
+              disabled={processing}
               className="flex items-center justify-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {loading ? (
+              {processing ? (
                 <>
                   <ArrowPathIcon className="animate-spin h-4 w-4 mr-2" />
                   Updating...

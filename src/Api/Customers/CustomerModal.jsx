@@ -131,9 +131,9 @@ const CustomerModal = ({
           <div className="text-center mb-6">
             <div className="flex flex-col items-center">
               <div className="relative mb-4">
-                {customer.profile_picture ? (
+                {customer.profile_pic ? (
                   <img
-                    src={customer.profile_picture}
+                    src={customer.profile_pic}
                     alt={customer.name}
                     className="h-24 w-24 rounded-full object-cover border-4 border-blue-100"
                     onError={(e) => {

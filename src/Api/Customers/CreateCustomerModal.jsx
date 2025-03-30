@@ -19,7 +19,7 @@ const DIAL_CODES = [
   { code: "+52", country: "Mexico", flag: "🇲🇽" },
 ];
 
-const DialCodeSelector = ({ selectedCode, onChange }) => {
+const DialCodeSelector = ({ selectedCode = { code: "+91", country: "India", flag: "🇮🇳" }, onChange }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [search, setSearch] = useState("");
   const dropdownRef = useRef(null);
@@ -45,13 +45,13 @@ const DialCodeSelector = ({ selectedCode, onChange }) => {
   }, []);
 
   return (
-    <div className="relative w-1/2">
+    <div className="relative w-1/2" ref={dropdownRef}>
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
         className="w-full px-3 py-2 border border-gray-300 rounded-lg flex items-center justify-between focus:ring-2 focus:ring-blue-400 bg-white hover:bg-gray-50 transition-colors"
       >
-        <div className="flex items-center gap-1"> {/* Reduced gap from gap-2 to gap-1 */}
+        <div className="flex items-center gap-1">
           <span className="text-lg">{selectedCode.flag}</span>
           <span className="font-medium">{selectedCode.code}</span>
         </div>
@@ -131,10 +131,9 @@ const DialCodeSelector = ({ selectedCode, onChange }) => {
     </div>
   );
 };
-
 const CreateCustomerModal = ({ isOpen, closeModal, onCreateSuccess }) => {
   const [formData, setFormData] = useState({
-    dial_code: DIAL_CODES[1], // Default to India (+91)
+    dial_code: DIAL_CODES[0], // Default to India (+91)
     phone_number: "",
     profile_pic: null
   });

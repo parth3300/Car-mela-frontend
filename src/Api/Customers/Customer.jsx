@@ -9,6 +9,7 @@ import UpdateCustomerModal from "./UpdateCustomerModal";
 import { PencilSquareIcon } from "@heroicons/react/24/solid";
 import { jwtDecode } from "jwt-decode";
 import SkeletonLoader from "../../components/SkeletonLoader";
+import ResponseHandler from "../../components/Globle/ResponseHandler";
 
 const Customers = () => {
   const [customers, setCustomers] = useState([]);
@@ -19,6 +20,9 @@ const Customers = () => {
   const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false);
   const [customerToUpdate, setCustomerToUpdate] = useState(null);
   const [notification, setNotification] = useState({ message: "", type: "" });
+  const [processing, setProcessing] = useState(false);
+  const [deleteProcessing, setDeleteProcessing] = useState(false);
+  const [updateProcessing, setUpdateProcessing] = useState(false);
 
   const authToken = localStorage.getItem("authToken");
   let user_id = "";
@@ -55,18 +59,20 @@ const Customers = () => {
     setCustomers((prev) => prev.filter((customer) => customer.id !== deletedId));
     setSelectedCustomer(null);
     setNotification({
-      message: "Customer deleted successfully!",
+      message: "delete",
       type: "success",
     });
+    setDeleteProcessing(false);
   };
 
   const handleCreateSuccess = (newCustomer) => {
     setCustomers((prev) => [newCustomer, ...prev]);
     setShowCreateModal(false);
     setNotification({
-      message: "Customer created successfully! 🎉",
+      message: "create",
       type: "success",
     });
+    setProcessing(false);
   };
 
   const handleUpdateSuccess = (updatedCustomer) => {
@@ -77,22 +83,13 @@ const Customers = () => {
     );
     setIsUpdateModalOpen(false);
     setNotification({
-      message: "Customer updated successfully! 🎉",
+      message: "update",
       type: "success",
     });
+    setUpdateProcessing(false);
   };
 
   let user_is_customer = customers.find((customer) => customer.user === user_id);
-
-  // Auto-hide notification after 5 seconds
-  useEffect(() => {
-    if (notification.message) {
-      const timer = setTimeout(() => {
-        setNotification({ message: "", type: "" });
-      }, 5000);
-      return () => clearTimeout(timer);
-    }
-  }, [notification]);
 
   return (
     <div className="bg-gradient-to-b from-blue-50 to-white min-h-screen p-8 flex flex-col items-center">
@@ -105,25 +102,6 @@ const Customers = () => {
       >
         👥 Manage Customers
       </motion.h1>
-
-      {/* Notification */}
-      <AnimatePresence>
-        {notification.message && (
-          <motion.div
-            className="fixed top-4 right-4 p-4 rounded-lg shadow-lg z-50"
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-            style={{
-              backgroundColor:
-                notification.type === "success" ? "#D1FAE5" : "#FEE2E2",
-              color: notification.type === "success" ? "#065F46" : "#991B1B",
-            }}
-          >
-            {notification.message}
-          </motion.div>
-        )}
-      </AnimatePresence>
 
       {/* Search + Create */}
       <motion.div
@@ -203,9 +181,7 @@ const Customers = () => {
                     <PhoneIcon className="h-4 w-4 mr-1 text-blue-400" />
                     +{customer.dial_code} {customer.phone_number}
                   </div>
-                  
                 </div>
-
 
                 {/* Update Button */}
                 {authToken && user_id && user_id === customer?.user && (
@@ -250,9 +226,10 @@ const Customers = () => {
         {showCreateModal && (
           <CreateCustomerModal
             isOpen={showCreateModal}
-            closeModal={() => setShowCreateModal(false)}
+            closeModal={() => !processing && setShowCreateModal(false)}
             onCreateSuccess={handleCreateSuccess}
-            setNotification={setNotification}
+            processing={processing}
+            setProcessing={setProcessing}
           />
         )}
       </AnimatePresence>
@@ -263,9 +240,10 @@ const Customers = () => {
           <CustomerModal
             isOpen={!!selectedCustomer}
             customer={selectedCustomer}
-            closeModal={() => setSelectedCustomer(null)}
+            closeModal={() => !deleteProcessing && setSelectedCustomer(null)}
             onDeleteSuccess={handleDeleteSuccess}
-            setNotification={setNotification}
+            deleteProcessing={deleteProcessing}
+            setDeleteProcessing={setDeleteProcessing}
           />
         )}
       </AnimatePresence>
@@ -276,12 +254,22 @@ const Customers = () => {
           <UpdateCustomerModal
             isOpen={isUpdateModalOpen}
             customer={customerToUpdate}
-            closeModal={() => setIsUpdateModalOpen(false)}
+            closeModal={() => !updateProcessing && setIsUpdateModalOpen(false)}
             onUpdateSuccess={handleUpdateSuccess}
-            setNotification={setNotification}
+            updateProcessing={updateProcessing}
+            setUpdateProcessing={setUpdateProcessing}
           />
         )}
       </AnimatePresence>
+
+      {/* Response Handler */}
+      <ResponseHandler
+        resourceName="Customer"
+        action={processing ? "create" : updateProcessing ? "update" : deleteProcessing ? "delete" : ""}
+        error={notification.type === "error" ? { message: notification.message } : null}
+        success={notification.type === "success" ? { message: notification.message } : null}
+        onClear={() => setNotification({ message: "", type: "" })}
+      />
     </div>
   );
 };
