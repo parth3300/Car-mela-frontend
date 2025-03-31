@@ -1,10 +1,9 @@
 import React, { useState, useEffect } from "react";
 import { Document, Page, Text, View, StyleSheet, Image } from "@react-pdf/renderer";
-const qrCodeUrl = (pdfUrl) => 
-  `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(pdfUrl)}`;
 
 const PdfGenerator = ({ carDetails = {}, customerDetails = {}, paymentDetails = {}, pdfUrl = "" }) => {
   const [profilePicDimensions, setProfilePicDimensions] = useState({ width: 80, height: 80 });
+  const [qrCodeDataUrl, setQrCodeDataUrl] = useState("");
 
   useEffect(() => {
     // Function to get image dimensions from URL
@@ -25,6 +24,15 @@ const PdfGenerator = ({ carDetails = {}, customerDetails = {}, paymentDetails = 
       getImageDimensions(customerDetails.profile_pic).then(setProfilePicDimensions);
     }
   }, [customerDetails.profile_pic]);
+
+  useEffect(() => {
+    // Generate QR code when pdfUrl changes
+    if (pdfUrl) {
+      // Using a reliable QR code generation service
+      const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(pdfUrl)}`;
+      setQrCodeDataUrl(qrCodeUrl);
+    }
+  }, [pdfUrl]);
 
   // Function to filter out excluded fields from carDetails
   const getFilteredCarDetails = (details) => {
@@ -52,7 +60,8 @@ const PdfGenerator = ({ carDetails = {}, customerDetails = {}, paymentDetails = 
     const excludedFields = [
       'id',
       'user',
-      'view_cars'    ];
+      'view_cars'
+    ];
     
     const filtered = {};
     for (const [key, value] of Object.entries(details)) {
@@ -81,6 +90,31 @@ const PdfGenerator = ({ carDetails = {}, customerDetails = {}, paymentDetails = 
       return value.toLocaleString();
     }
     return value.toString();
+  };
+
+  // Function to render star ratings
+  const renderStarRating = (rating) => {
+    if (rating === null || rating === undefined) return <Text style={styles.value}>N/A</Text>;
+    
+    const numericRating = Number(rating);
+    if (isNaN(numericRating)) return <Text style={styles.value}>N/A</Text>;
+    
+    const fullStars = Math.floor(numericRating);
+    const hasHalfStar = numericRating % 1 >= 0.5;
+    const emptyStars = 5 - fullStars - (hasHalfStar ? 1 : 0);
+    
+    return (
+      <View style={styles.starsContainer}>
+        {[...Array(fullStars)].map((_, i) => (
+          <Text key={`full-${i}`} style={styles.star}>★</Text>
+        ))}
+        {hasHalfStar && <Text style={styles.halfStar}>½</Text>}
+        {[...Array(emptyStars)].map((_, i) => (
+          <Text key={`empty-${i}`} style={styles.emptyStar}>☆</Text>
+        ))}
+        <Text style={styles.ratingText}>({numericRating.toFixed(1)})</Text>
+      </View>
+    );
   };
 
   const styles = StyleSheet.create({
@@ -213,6 +247,27 @@ const PdfGenerator = ({ carDetails = {}, customerDetails = {}, paymentDetails = 
       textAlign: "center",
       color: "#999999",
     },
+    starsContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+    },
+    star: {
+      fontSize: 12,
+      color: '#FFD700',
+    },
+    halfStar: {
+      fontSize: 12,
+      color: '#FFD700',
+    },
+    emptyStar: {
+      fontSize: 12,
+      color: '#CCCCCC',
+    },
+    ratingText: {
+      marginLeft: 5,
+      fontSize: 12,
+      color: "#333333",
+    },
   });
 
   // Safely extract values with defaults and apply filters
@@ -223,6 +278,7 @@ const PdfGenerator = ({ carDetails = {}, customerDetails = {}, paymentDetails = 
     image: null,
     color: "",
     mileage: 0,
+    average_rating: null,
     ...getFilteredCarDetails(carDetails)
   };
 
@@ -240,18 +296,16 @@ const PdfGenerator = ({ carDetails = {}, customerDetails = {}, paymentDetails = 
     date: new Date().toISOString(),
     ...paymentDetails
   };
-console.log('hi3',safeCarDetails);
 
   return (
     <Document>
-
       <Page size="A4" style={styles.page}>
-      {/* Header */}
-      <View style={styles.header}>
-        <Text style={styles.title}>Purchase Confirmation</Text>
-        <Text style={styles.subtitle}>Order #: {safePaymentDetails.transactionId || "N/A"}</Text>
-        <Text style={styles.subtitle}>Date: {new Date(safePaymentDetails.date).toLocaleDateString()}</Text>
-      </View>
+        {/* Header */}
+        <View style={styles.header}>
+          <Text style={styles.title}>Purchase Confirmation</Text>
+          <Text style={styles.subtitle}>Order #: {safePaymentDetails.transactionId || "N/A"}</Text>
+          <Text style={styles.subtitle}>Date: {new Date(safePaymentDetails.date).toLocaleDateString()}</Text>
+        </View>
 
         {/* Customer Details */}
         <View style={styles.section}>
@@ -284,8 +338,9 @@ console.log('hi3',safeCarDetails);
           </View>
           {Object.entries(safeCustomerDetails).map(([key, value]) => {
             if (['name', 'email', 'dial_code', 'phone_number', 'profile_pic'].includes(key)) return null;
+
             let formattedValue = value;
-  
+
             if (key === 'registered_date' && typeof value === 'string') {
               formattedValue = new Date(value).toLocaleDateString(undefined, {
                 year: "numeric",
@@ -294,25 +349,24 @@ console.log('hi3',safeCarDetails);
               });
             }
 
+            if (Array.isArray(value)) {
+              formattedValue = value.join(', ');
+            }
 
             return (
               <View style={styles.row} key={key}>
-                <Text style={styles.label}>{formatLabel(key)}:</Text>
-                <Text style={styles.value}>{formattedValue}</Text>
+                <Text style={styles.label}>{formatLabel(key)}</Text>
+                <Text style={styles.value}>: {formattedValue}</Text>
               </View>
             );
           })}
         </View>
-        
       </Page>
 
       <Page size="A4" style={styles.page}>
-
         {/* Vehicle Details */}
-
         <View style={styles.header}>
-           <Text style={styles.sectionTitle}>Vehicle Purchased</Text>
-
+          <Text style={styles.sectionTitle}>Vehicle Purchased</Text>
         </View>
 
         <View style={styles.section}>
@@ -325,36 +379,32 @@ console.log('hi3',safeCarDetails);
           )}
           
           {Object.entries(safeCarDetails).map(([key, value]) => {
-              if (key === "image") return null;
+            if (key === "image") return null;
 
-              if (key === "average_rating" && !isNaN(value)) {
-                const stars = "⭐".repeat(Math.round(Number(value))); // Ensure it's a number
-                return (
-                  <View style={styles.row} key={key}>
-                    <Text style={styles.label}>{formatLabel(key)}:</Text>
-                    <Text style={styles.value}>{stars} ({Number(value).toFixed(1)})</Text>
-                  </View>
-                );
-              }
+            if (key === "average_rating" && !isNaN(value)) {
 
               return (
                 <View style={styles.row} key={key}>
                   <Text style={styles.label}>{formatLabel(key)}:</Text>
-                  <Text style={styles.value}>{formatValue(key, value)}</Text>
-                </View>
+                  <Text style={styles.value}>: ({(Number(value)).toFixed(1)} / 5.0)</Text>
+                  </View>
               );
-          })}
+            }
 
+            return (
+              <View style={styles.row} key={key}>
+                <Text style={styles.label}>{formatLabel(key)}</Text>
+                <Text style={styles.value}>: {formatValue(key, value)}</Text>
+                </View>
+            );
+          })}
         </View>
-        
       </Page>
 
       <Page size="A4" style={styles.page}>
-
         {/* Payment Details */}
         <View style={styles.header}>
-           <Text style={styles.sectionTitle}>Payment Information</Text>
-
+          <Text style={styles.sectionTitle}>Payment Information</Text>
         </View>
 
         <View style={styles.section}>
@@ -406,14 +456,12 @@ console.log('hi3',safeCarDetails);
           </View>
         </View>
 
-
-        {pdfUrl && (
+        {qrCodeDataUrl && (
           <View style={styles.qrContainer}>
-              <Image src={qrCodeUrl(pdfUrl)} style={styles.qrImage} alt="QR Code" />
-              <Text style={styles.qrText}>Scan to view this document online</Text>
+            <Image src={qrCodeDataUrl} style={styles.qrImage} alt="QR Code" />
+            <Text style={styles.qrText}>Scan to view this document online</Text>
           </View>
         )}
-
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Terms & Conditions</Text>
@@ -432,7 +480,6 @@ console.log('hi3',safeCarDetails);
           <Text>Thank you for your business! • {new Date().getFullYear()} © AutoDealer Inc.</Text>
         </View>
       </Page>
-
     </Document>
   );
 };

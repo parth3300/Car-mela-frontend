@@ -106,6 +106,7 @@ const PaymentSuccess = () => {
     );
   }
 
+    console.log('paymentStatus',paymentStatus);
     
   return (
     <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white py-12 px-4 sm:px-6 lg:px-8">
@@ -315,7 +316,7 @@ const PaymentSuccess = () => {
                           paymentDetails={paymentStatus.paymentDetails}
                         />
                       }
-                      fileName={`purchase-confirmation-${paymentStatus.paymentDetails.transactionId}.pdf`}
+                      fileName={`purchase-confirmation-for-${paymentStatus.carDetails.title}-${paymentStatus.paymentDetails.transactionId}.pdf`}
                       className="flex-1"
                     >
                       {({ loading }) => (
