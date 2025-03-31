@@ -48,22 +48,7 @@ const PaymentSuccess = () => {
       // Extract only the needed properties from the payment intent
       const paymentIntent = response.data.session.payment_intent;
       const amountTotal = response.data.session.amount_total / 100;
-      delete carDetails.data.id
-      delete carDetails.data.ratings
-      delete carDetails.data.company
-      delete carDetails.data.carowner
-      delete carDetails.data.reviews
-      delete carDetails.data.dealerships
-      delete carDetails.data.average_rating
-      delete carDetails.data.last_update
 
-
-      delete carOwnerDetails.data.id
-      delete carOwnerDetails.data.user
-      delete carOwnerDetails.data.view_cars
-      delete carOwnerDetails.data.dial_code
-
-      console.log(carDetails,carOwnerDetails);
       
       setPaymentStatus({
         loading: false,
@@ -181,7 +166,7 @@ const PaymentSuccess = () => {
                             <svg
                               key={i}
                               className={`h-5 w-5 ${
-                                i < paymentStatus.carDetails.ratings
+                                i < paymentStatus.carDetails.average_rating
                                   ? "text-yellow-400"
                                   : "text-gray-300"
                               }`}

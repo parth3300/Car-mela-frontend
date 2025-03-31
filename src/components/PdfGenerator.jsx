@@ -1,17 +1,67 @@
 import React, { useState, useEffect } from "react";
 import { Document, Page, Text, View, StyleSheet, Image } from "@react-pdf/renderer";
-import QRCode from "qrcode";
+const qrCodeUrl = (pdfUrl) => 
+  `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(pdfUrl)}`;
 
 const PdfGenerator = ({ carDetails = {}, customerDetails = {}, paymentDetails = {}, pdfUrl = "" }) => {
-  const [qrCodeDataUrl, setQrCodeDataUrl] = useState("");
+  const [profilePicDimensions, setProfilePicDimensions] = useState({ width: 80, height: 80 });
 
   useEffect(() => {
-    if (pdfUrl) {
-      QRCode.toDataURL(pdfUrl)
-        .then((url) => setQrCodeDataUrl(url))
-        .catch((err) => console.error("Error generating QR code:", err));
+    // Function to get image dimensions from URL
+    const getImageDimensions = (url) => {
+      return new Promise((resolve) => {
+        const img = new window.Image();
+        img.onload = () => {
+          resolve({ width: img.width, height: img.height });
+        };
+        img.onerror = () => {
+          resolve({ width: 80, height: 80 }); // Default dimensions if image fails to load
+        };
+        img.src = url;
+      });
+    };
+
+    if (customerDetails.profile_pic) {
+      getImageDimensions(customerDetails.profile_pic).then(setProfilePicDimensions);
     }
-  }, [pdfUrl]);
+  }, [customerDetails.profile_pic]);
+
+  // Function to filter out excluded fields from carDetails
+  const getFilteredCarDetails = (details) => {
+    const excludedFields = [
+      'id', 
+      'ratings', 
+      'company', 
+      'carowner', 
+      'reviews', 
+      'dealerships', 
+      'last_update'
+    ];
+    
+    const filtered = {};
+    for (const [key, value] of Object.entries(details)) {
+      if (!excludedFields.includes(key)) {
+        filtered[key] = value;
+      }
+    }
+    return filtered;
+  };
+
+  // Function to filter out excluded fields from customerDetails (carOwnerDetails)
+  const getFilteredCustomerDetails = (details) => {
+    const excludedFields = [
+      'id',
+      'user',
+      'view_cars'    ];
+    
+    const filtered = {};
+    for (const [key, value] of Object.entries(details)) {
+      if (!excludedFields.includes(key)) {
+        filtered[key] = value;
+      }
+    }
+    return filtered;
+  };
 
   // Safely format labels and values
   const formatLabel = (str) => {
@@ -64,6 +114,22 @@ const PdfGenerator = ({ carDetails = {}, customerDetails = {}, paymentDetails = 
       fontWeight: "bold",
       marginBottom: 10,
       color: "#333333",
+    },
+    customerHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginBottom: 15,
+    },
+    profilePic: {
+      width: profilePicDimensions.width,
+      height: profilePicDimensions.height,
+      borderRadius: 40,
+      marginRight: 20,
+      borderWidth: 1,
+      borderColor: '#eeeeee',
+    },
+    customerInfo: {
+      flex: 1,
     },
     row: {
       flexDirection: "row",
@@ -149,26 +215,23 @@ const PdfGenerator = ({ carDetails = {}, customerDetails = {}, paymentDetails = 
     },
   });
 
-  // Safely extract values with defaults
+  // Safely extract values with defaults and apply filters
   const safeCarDetails = {
     title: "",
     carmodel: "",
     price: 0,
     image: null,
-    vin: "",
-    year: "",
     color: "",
     mileage: 0,
-    ...carDetails
+    ...getFilteredCarDetails(carDetails)
   };
 
   const safeCustomerDetails = {
-    id: "",
     name: "",
     email: "",
-    dial_code: "",
     phone_number: "",
-    ...customerDetails
+    profile_pic: null,
+    ...getFilteredCustomerDetails(customerDetails)
   };
 
   const safePaymentDetails = {
@@ -177,35 +240,82 @@ const PdfGenerator = ({ carDetails = {}, customerDetails = {}, paymentDetails = 
     date: new Date().toISOString(),
     ...paymentDetails
   };
+console.log('hi3',safeCarDetails);
 
   return (
     <Document>
+
       <Page size="A4" style={styles.page}>
-        {/* Header */}
-        <View style={styles.header}>
-          <Text style={styles.title}>Purchase Confirmation</Text>
-          <Text style={styles.subtitle}>Order #: {safePaymentDetails.transactionId || "N/A"}</Text>
-          <Text style={styles.subtitle}>Date: {new Date(safePaymentDetails.date).toLocaleDateString()}</Text>
-        </View>
+      {/* Header */}
+      <View style={styles.header}>
+        <Text style={styles.title}>Purchase Confirmation</Text>
+        <Text style={styles.subtitle}>Order #: {safePaymentDetails.transactionId || "N/A"}</Text>
+        <Text style={styles.subtitle}>Date: {new Date(safePaymentDetails.date).toLocaleDateString()}</Text>
+      </View>
 
         {/* Customer Details */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Customer Information</Text>
-          {Object.entries(safeCustomerDetails).map(([key, value]) => (
-            <View style={styles.row} key={key}>
-              <Text style={styles.label}>{formatLabel(key)}:</Text>
-              <Text style={styles.value}>
-                {key === "phone_number" 
-                  ? `${safeCustomerDetails.dial_code ? `+${safeCustomerDetails.dial_code} ` : ""}${value || "N/A"}`
-                  : formatValue(key, value)}
-              </Text>
+          <View style={styles.customerHeader}>
+            {safeCustomerDetails.profile_pic && (
+              <Image 
+                src={safeCustomerDetails.profile_pic} 
+                style={styles.profilePic}
+                alt="Customer Profile"
+              />
+            )}
+            <View style={styles.customerInfo}>
+              {safeCustomerDetails.name && (
+                <Text style={{ fontSize: 16, fontWeight: 'bold', marginBottom: 5 }}>
+                  {safeCustomerDetails.name}
+                </Text>
+              )}
+              {safeCustomerDetails.email && (
+                <Text style={{ fontSize: 12, color: '#666666', marginBottom: 3 }}>
+                  {safeCustomerDetails.email}
+                </Text>
+              )}
+              {safeCustomerDetails.phone_number && (
+                <Text style={{ fontSize: 12, color: '#666666' }}>
+                  +{safeCustomerDetails.dial_code} {safeCustomerDetails.phone_number}
+                </Text>
+              )}
             </View>
-          ))}
+          </View>
+          {Object.entries(safeCustomerDetails).map(([key, value]) => {
+            if (['name', 'email', 'dial_code', 'phone_number', 'profile_pic'].includes(key)) return null;
+            let formattedValue = value;
+  
+            if (key === 'registered_date' && typeof value === 'string') {
+              formattedValue = new Date(value).toLocaleDateString(undefined, {
+                year: "numeric",
+                month: "long",
+                day: "numeric",
+              });
+            }
+
+
+            return (
+              <View style={styles.row} key={key}>
+                <Text style={styles.label}>{formatLabel(key)}:</Text>
+                <Text style={styles.value}>{formattedValue}</Text>
+              </View>
+            );
+          })}
         </View>
+        
+      </Page>
+
+      <Page size="A4" style={styles.page}>
 
         {/* Vehicle Details */}
+
+        <View style={styles.header}>
+           <Text style={styles.sectionTitle}>Vehicle Purchased</Text>
+
+        </View>
+
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Vehicle Purchased</Text>
           {safeCarDetails.image && (
             <Image 
               src={safeCarDetails.image} 
@@ -213,20 +323,41 @@ const PdfGenerator = ({ carDetails = {}, customerDetails = {}, paymentDetails = 
               alt={`${safeCarDetails.title} ${safeCarDetails.carmodel}`}
             />
           )}
+          
           {Object.entries(safeCarDetails).map(([key, value]) => {
-            if (key === "image") return null;
-            return (
-              <View style={styles.row} key={key}>
-                <Text style={styles.label}>{formatLabel(key)}:</Text>
-                <Text style={styles.value}>{formatValue(key, value)}</Text>
-              </View>
-            );
+              if (key === "image") return null;
+
+              if (key === "average_rating" && !isNaN(value)) {
+                const stars = "⭐".repeat(Math.round(Number(value))); // Ensure it's a number
+                return (
+                  <View style={styles.row} key={key}>
+                    <Text style={styles.label}>{formatLabel(key)}:</Text>
+                    <Text style={styles.value}>{stars} ({Number(value).toFixed(1)})</Text>
+                  </View>
+                );
+              }
+
+              return (
+                <View style={styles.row} key={key}>
+                  <Text style={styles.label}>{formatLabel(key)}:</Text>
+                  <Text style={styles.value}>{formatValue(key, value)}</Text>
+                </View>
+              );
           })}
+
         </View>
+        
+      </Page>
+
+      <Page size="A4" style={styles.page}>
 
         {/* Payment Details */}
+        <View style={styles.header}>
+           <Text style={styles.sectionTitle}>Payment Information</Text>
+
+        </View>
+
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Payment Information</Text>
           <View style={styles.table}>
             <View style={[styles.tableRow, styles.tableHeader]}>
               <View style={styles.tableCol}><Text>Description</Text></View>
@@ -275,12 +406,14 @@ const PdfGenerator = ({ carDetails = {}, customerDetails = {}, paymentDetails = 
           </View>
         </View>
 
-        {qrCodeDataUrl && (
+
+        {pdfUrl && (
           <View style={styles.qrContainer}>
-            <Image src={qrCodeDataUrl} style={styles.qrImage} alt="QR Code" />
-            <Text style={styles.qrText}>Scan to view this document online</Text>
+              <Image src={qrCodeUrl(pdfUrl)} style={styles.qrImage} alt="QR Code" />
+              <Text style={styles.qrText}>Scan to view this document online</Text>
           </View>
         )}
+
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Terms & Conditions</Text>
@@ -299,6 +432,7 @@ const PdfGenerator = ({ carDetails = {}, customerDetails = {}, paymentDetails = 
           <Text>Thank you for your business! • {new Date().getFullYear()} © AutoDealer Inc.</Text>
         </View>
       </Page>
+
     </Document>
   );
 };
