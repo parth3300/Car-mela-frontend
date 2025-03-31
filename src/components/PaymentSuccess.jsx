@@ -4,9 +4,13 @@ import axios from "axios";
 import { motion } from "framer-motion";
 import { CheckCircle, AlertCircle, Download, X } from "lucide-react";
 import { BACKEND_URL } from "../Constants/constant";
-import PdfGenerator from "./PdfGenerator";
 import { PDFDownloadLink } from '@react-pdf/renderer';
+import PdfGenerator from "./PdfGenerator";
 
+// // PDF Generator Component
+
+
+// Main Payment Success Component
 const PaymentSuccess = () => {
   const [paymentStatus, setPaymentStatus] = useState({
     loading: true,
@@ -35,6 +39,9 @@ const PaymentSuccess = () => {
         headers: { Authorization: `Bearer ${authToken}` },
       });
 
+      const carDetails = await axios.get(`${BACKEND_URL}/store/cars/${response?.data?.car_id}/`, {
+        headers: { Authorization: `Bearer ${authToken}` },
+      });
       // Extract only the needed properties from the payment intent
       const paymentIntent = response.data.session.payment_intent;
       const amountTotal = response.data.session.amount_total / 100;
@@ -43,7 +50,7 @@ const PaymentSuccess = () => {
         loading: false,
         success: true,
         error: null,
-        carDetails: response.data.car,
+        carDetails: carDetails.data,
         paymentDetails: {
           transactionId: typeof paymentIntent === 'object' ? paymentIntent.id : paymentIntent,
           amount: amountTotal,
@@ -101,6 +108,7 @@ const PaymentSuccess = () => {
     );
   }
 
+    
   return (
     <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white py-12 px-4 sm:px-6 lg:px-8">
       <motion.div
@@ -285,6 +293,7 @@ const PaymentSuccess = () => {
                 </ul>
               </div>
 
+              {/* Updated Button Section */}
               <div className="mt-10 flex flex-col sm:flex-row gap-4">
                 <button
                   onClick={() => navigate("/cars")}
@@ -292,35 +301,36 @@ const PaymentSuccess = () => {
                 >
                   Browse More Cars
                 </button>
-                <button
-                  onClick={() => navigate("/account/orders")}
-                  className="flex-1 px-6 py-3 border border-gray-300 rounded-md shadow-sm text-base font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-                >
-                  View Your Orders
-                </button>
-              </div>
-              
-              <div className="mt-6 flex justify-center">
-                {paymentStatus.carDetails && paymentStatus.customerDetails && paymentStatus.paymentDetails && (
-                  <PDFDownloadLink
-                    document={
-                      <PdfGenerator
-                        carDetails={paymentStatus.carDetails}
-                        customerDetails={paymentStatus.customerDetails}
-                        paymentDetails={paymentStatus.paymentDetails}
-                      />
-                    }
-                    fileName={`purchase-confirmation-${paymentStatus.paymentDetails.transactionId}.pdf`}
-                    className="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+                <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto">
+                  <button
+                    onClick={() => navigate("/account/orders")}
+                    className="flex-1 px-6 py-3 border border-gray-300 rounded-md shadow-sm text-base font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
                   >
-                    {({ loading }) => (
-                      <>
-                        <Download className="h-5 w-5 mr-2" />
-                        {loading ? 'Generating Receipt...' : 'Download Receipt (PDF)'}
-                      </>
-                    )}
-                  </PDFDownloadLink>
-                )}
+                    View Your Orders
+                  </button>
+                  {paymentStatus.carDetails && paymentStatus.customerDetails && paymentStatus.paymentDetails && (
+                    <PDFDownloadLink
+                      document={
+                        <PdfGenerator
+                          carDetails={paymentStatus.carDetails}
+                          customerDetails={paymentStatus.customerDetails}
+                          paymentDetails={paymentStatus.paymentDetails}
+                        />
+                      }
+                      fileName={`purchase-confirmation-${paymentStatus.paymentDetails.transactionId}.pdf`}
+                      className="flex-1"
+                    >
+                      {({ loading }) => (
+                        <button
+                          className="w-full px-6 py-3 border border-transparent rounded-md shadow-sm text-base font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 inline-flex items-center justify-center"
+                        >
+                          <Download className="h-5 w-5 mr-2" />
+                          {loading ? 'Generating...' : 'Get PDF'}
+                        </button>
+                      )}
+                    </PDFDownloadLink>
+                  )}
+                </div>
               </div>
             </div>
           </div>

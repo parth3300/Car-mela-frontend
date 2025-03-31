@@ -7,7 +7,7 @@ import { CheckCircleIcon, ChevronDownIcon, PhotoIcon, XMarkIcon } from "@heroico
 import ResponseHandler from "../../components/Globle/ResponseHandler";
 
 const DIAL_CODES = [
-  { code: "+91", country: "India", flag: "🇮🇳🇩" },
+  { code: "+91", country: "India", flag: "🇮🇳" },
   { code: "+1", country: "USA", flag: "🇺🇸" },
   { code: "+44", country: "UK", flag: "🇬🇧" },
   { code: "+61", country: "Australia", flag: "🇦🇺" },
@@ -30,7 +30,6 @@ const DialCodeSelector = ({ selectedCode, onChange }) => {
       dial.code.includes(search)
   );
 
-  // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
@@ -45,14 +44,14 @@ const DialCodeSelector = ({ selectedCode, onChange }) => {
   }, []);
 
   return (
-    <div className="relative w-1/2">
+    <div className="relative w-24">
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full px-3 py-2 border border-gray-300 rounded-lg flex items-center justify-between focus:ring-2 focus:ring-blue-400 bg-white hover:bg-gray-50 transition-colors"
+        className="w-full px-3 py-2 h-full border border-gray-300 rounded-l-md flex items-center justify-between focus:ring-2 focus:ring-blue-400 bg-white hover:bg-gray-50 transition-colors"
       >
-        <div className="flex items-center gap-1"> {/* Reduced gap from gap-2 to gap-1 */}
-          <span className="text-lg">{selectedCode.flag}</span>
+      <div className="flex items-center gap-2 mr-[10px]">
+      <span className="text-lg">{selectedCode.flag}</span>
           <span className="font-medium">{selectedCode.code}</span>
         </div>
         <ChevronDownIcon 
@@ -65,7 +64,7 @@ const DialCodeSelector = ({ selectedCode, onChange }) => {
           initial={{ opacity: 0, y: -10, scale: 0.95 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
           exit={{ opacity: 0, y: -10, scale: 0.95 }}
-          className="absolute mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg z-20 overflow-hidden"
+          className="absolute mt-1 w-64 bg-white border border-gray-200 rounded-lg shadow-lg z-20 overflow-hidden"
         >
           <div className="p-2 border-b border-gray-100">
             <div className="relative">
@@ -131,7 +130,6 @@ const DialCodeSelector = ({ selectedCode, onChange }) => {
     </div>
   );
 };
-
 const CreateCarOwnerModal = ({ isOpen, closeModal, onCreateSuccess }) => {
   const [formData, setFormData] = useState({
     dial_code: DIAL_CODES[0],

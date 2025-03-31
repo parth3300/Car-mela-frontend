@@ -20,7 +20,7 @@ const Dealership = () => {
     type: "",
   });
   const [processing, setProcessing] = useState(false);
-  const [deletingId, setDeletingId] = useState(null); // Track which dealership is being deleted
+  const [deletingId, setDeletingId] = useState(null);
 
   const authToken = localStorage.getItem("authToken");
 
@@ -65,6 +65,8 @@ const Dealership = () => {
   };
 
   const handleDeleteDealership = async (id) => {
+    if (deletingId) return; // Prevent multiple deletions
+    
     setDeletingId(id);
     try {
       await axios.delete(`${BACKEND_URL}/store/dealerships/${id}/`, {
@@ -77,13 +79,12 @@ const Dealership = () => {
         message: "Dealership deleted successfully!",
         type: "success",
       });
-      if (selectedDealership?.id === id) {
-        setSelectedDealership(null);
-      }
+      setSelectedDealership(null);
     } catch (error) {
       console.error("Error deleting dealership:", error);
       setNotification({
-        message: "Failed to delete dealership. Please try again.",
+        message: error.response?.data?.message || 
+               "Failed to delete dealership. Please try again.",
         type: "error",
       });
     } finally {
@@ -99,7 +100,6 @@ const Dealership = () => {
     );
   });
 
-  // Static placeholder images based on dealership name initials
   const getPlaceholderImage = (name) => {
     const colors = [
       'bg-blue-500', 'bg-green-500', 'bg-red-500', 
@@ -115,7 +115,6 @@ const Dealership = () => {
     );
   };
 
-  // Function to truncate text with ellipsis
   const truncateText = (text, maxLength) => {
     if (!text) return "Unknown Location";
     return text.length > maxLength 
@@ -125,7 +124,6 @@ const Dealership = () => {
 
   return (
     <div className="bg-gradient-to-b from-blue-50 to-white min-h-screen p-8 flex flex-col items-center">
-      {/* Title */}
       <motion.h1
         className="text-5xl font-extrabold mb-10 text-center text-blue-800"
         initial={{ opacity: 0, y: -20 }}
@@ -135,14 +133,12 @@ const Dealership = () => {
         🏢 Explore Dealerships
       </motion.h1>
 
-      {/* Search and Create Section */}
       <motion.div
         className="w-full max-w-6xl flex flex-col md:flex-row justify-between items-center mb-12 gap-4"
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.3, duration: 0.5 }}
       >
-        {/* Search Input */}
         <input
           type="text"
           placeholder="Search Dealerships..."
@@ -151,7 +147,6 @@ const Dealership = () => {
           className="px-4 py-3 w-full md:w-1/3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-400 focus:outline-none transition-all"
         />
 
-        {/* Create Dealership Button */}
         {authToken ? (
           <motion.button
             onClick={() => setShowCreateModal(true)}
@@ -168,10 +163,8 @@ const Dealership = () => {
         )}
       </motion.div>
 
-      {/* Skeleton Loading */}
       {loading && <SkeletonLoader />}
 
-      {/* Dealerships Grid */}
       {!loading && (
         <div className="w-full max-w-7xl grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 justify-center">
           {filteredDealerships.map((dealership, index) => (
@@ -187,7 +180,6 @@ const Dealership = () => {
                 onClick={() => setSelectedDealership(dealership)}
                 className="relative bg-white rounded-2xl overflow-hidden shadow-xl cursor-pointer group transform transition-all duration-300 border border-gray-100 h-full flex flex-col"
               >
-                {/* Dealership Image */}
                 <div className="relative w-full h-48 overflow-hidden">
                   {dealership.image ? (
                     <img
@@ -203,7 +195,6 @@ const Dealership = () => {
                     getPlaceholderImage(dealership.dealership_name)
                   )}
                   
-                  {/* Overlay on hover */}
                   <div className="absolute inset-0 bg-black bg-opacity-50 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-center items-center text-white px-4">
                     <div className="text-2xl font-bold mb-2">
                       {dealership.dealership_name}
@@ -212,7 +203,6 @@ const Dealership = () => {
                   </div>
                 </div>
 
-                {/* Bottom Info */}
                 <div className="p-4 bg-gradient-to-r from-blue-100 to-white flex-1 flex flex-col justify-between">
                   <div>
                     <div className="text-blue-800 font-bold text-lg truncate">
@@ -235,7 +225,6 @@ const Dealership = () => {
         </div>
       )}
 
-      {/* No Dealerships Found */}
       {!loading && filteredDealerships.length === 0 && (
         <motion.div
           className="text-gray-600 text-lg mt-10"
@@ -246,7 +235,6 @@ const Dealership = () => {
         </motion.div>
       )}
 
-      {/* Create Dealership Modal */}
       <AnimatePresence>
         {showCreateModal && (
           <CreateDealershipModal
@@ -257,7 +245,6 @@ const Dealership = () => {
         )}
       </AnimatePresence>
 
-      {/* View Dealership Modal */}
       <AnimatePresence>
         {selectedDealership && (
           <DealershipModal
@@ -270,7 +257,6 @@ const Dealership = () => {
         )}
       </AnimatePresence>
 
-      {/* Notification */}
       {notification.message && (
         <Notification
           message={notification.message}

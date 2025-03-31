@@ -3,6 +3,7 @@ import axios from "axios";
 import { motion } from "framer-motion";
 import { XMarkIcon, PhotoIcon, ArrowPathIcon, ChevronDownIcon, CheckCircleIcon } from "@heroicons/react/24/solid";
 import { BACKEND_URL } from "../../Constants/constant";
+import ResponseHandler from "../../components/Globle/ResponseHandler";
 
 const DIAL_CODES = [
   { code: "+91", country: "India", flag: "🇮🇳" },
@@ -48,8 +49,8 @@ const DialCodeSelector = ({ selectedCode, onChange }) => {
         onClick={() => setIsOpen(!isOpen)}
         className="w-full px-3 py-2 h-full border border-gray-300 rounded-l-md flex items-center justify-between focus:ring-2 focus:ring-blue-400 bg-white hover:bg-gray-50 transition-colors"
       >
-        <div className="flex items-center gap-1">
-          <span className="text-lg">{selectedCode.flag}</span>
+      <div className="flex items-center gap-2 mr-[10px]">
+      <span className="text-lg">{selectedCode.flag}</span>
           <span className="font-medium">{selectedCode.code}</span>
         </div>
         <ChevronDownIcon 
@@ -134,8 +135,6 @@ const UpdateCustomerModal = ({
   customer,
   closeModal,
   onUpdateSuccess,
-  processing,
-  setProcessing,
 }) => {
   const [formData, setFormData] = useState({
     dial_code: "+91",
@@ -143,9 +142,15 @@ const UpdateCustomerModal = ({
     profile_pic: null
   });
   const [previewImage, setPreviewImage] = useState(null);
-  const [error, setError] = useState("");
-  
+  const [loading, setLoading] = useState(false);
+  const [notification, setNotification] = useState({
+    type: null,
+    message: null,
+    details: null
+  });
+
   const fileInputRef = useRef(null);
+  const modalRef = useRef(null);
 
   useEffect(() => {
     if (customer) {
@@ -160,6 +165,30 @@ const UpdateCustomerModal = ({
       }
     }
   }, [customer]);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (modalRef.current && !modalRef.current.contains(event.target)) {
+        closeModal();
+      }
+    };
+
+    if (isOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [isOpen, closeModal]);
+
+  const clearNotification = () => {
+    setNotification({
+      type: null,
+      message: null,
+      details: null
+    });
+  };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -181,17 +210,25 @@ const UpdateCustomerModal = ({
     if (!file) return;
 
     if (!file.type.match('image.*')) {
-      setError("❌ Please select an image file (JPEG, PNG)");
+      setNotification({
+        type: 'error',
+        message: 'Invalid file type',
+        details: 'Please select an image file (JPEG, PNG)'
+      });
       return;
     }
 
     if (file.size > 5 * 1024 * 1024) {
-      setError("❌ Image size should be less than 5MB");
+      setNotification({
+        type: 'error',
+        message: 'File too large',
+        details: 'Image size should be less than 5MB'
+      });
       return;
     }
 
     setFormData((prev) => ({ ...prev, profile_pic: file }));
-    setError("");
+    clearNotification();
 
     const reader = new FileReader();
     reader.onloadend = () => {
@@ -202,14 +239,13 @@ const UpdateCustomerModal = ({
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setProcessing(true);
-    setError("");
+    setLoading(true);
+    clearNotification();
 
     try {
       const authToken = localStorage.getItem("authToken");
       const formDataToSend = new FormData();
       
-      // Remove '+' from dial_code before sending
       const dialCodeWithoutPlus = formData.dial_code.replace('+', '');
       formDataToSend.append("dial_code", dialCodeWithoutPlus);
       formDataToSend.append("phone_number", formData.phone_number);
@@ -229,27 +265,63 @@ const UpdateCustomerModal = ({
         }
       );
 
+      setNotification({
+        type: 'success',
+        message: 'Customer updated successfully!',
+        details: null
+      });
+
       onUpdateSuccess(response.data);
-      closeModal();
+      
+      // Don't set loading to false here - let the modal close first
     } catch (error) {
       console.error("Error updating customer:", error);
       
-      let errorMessage = "Failed to update customer. Please try again.";
+      let errorMessage = "Failed to update customer";
+      let errorDetails = null;
+      
       if (error.response) {
         if (error.response.data) {
-          if (typeof error.response.data === "object") {
-            errorMessage = Object.values(error.response.data).flat().join(" ");
-          } else {
-            errorMessage = error.response.data;
-          }
+          errorDetails = typeof error.response.data === 'object' 
+            ? Object.entries(error.response.data).map(([field, messages]) => (
+                <div key={field}>
+                  <strong>{field}:</strong> {Array.isArray(messages) ? messages.join(" ") : messages}
+                </div>
+              ))
+            : error.response.data;
+        } else {
+          errorDetails = error.response.statusText || "Unknown error occurred";
         }
+      } else if (error.message) {
+        errorDetails = error.message;
       }
+
+      setNotification({
+        type: 'error',
+        message: errorMessage,
+        details: errorDetails
+      });
       
-      setError(errorMessage);
-    } finally {
-      setProcessing(false);
+      setLoading(false);
     }
   };
+
+  // Handle modal closing after success
+  useEffect(() => {
+    if (notification.type === 'success') {
+      const timer = setTimeout(() => {
+        closeModal();
+      }, 1500);
+      return () => clearTimeout(timer);
+    }
+  }, [notification.type, closeModal]);
+
+  // Reset loading state when modal closes
+  useEffect(() => {
+    if (!isOpen) {
+      setLoading(false);
+    }
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -258,6 +330,7 @@ const UpdateCustomerModal = ({
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
       <motion.div
+        ref={modalRef}
         initial={{ opacity: 0, scale: 0.9 }}
         animate={{ opacity: 1, scale: 1 }}
         exit={{ opacity: 0, scale: 0.9 }}
@@ -266,14 +339,21 @@ const UpdateCustomerModal = ({
       >
         <div className="flex justify-between items-center p-6 border-b">
           <h3 className="text-xl font-bold text-gray-800">Update Customer</h3>
-          <button 
-            onClick={closeModal} 
-            className="text-gray-500 hover:text-gray-700"
-            disabled={processing}
+          <button
+            onClick={closeModal}
+            disabled={loading}
+            className="text-gray-500 hover:text-gray-700 transition disabled:opacity-50"
           >
             <XMarkIcon className="h-6 w-6" />
           </button>
         </div>
+
+        <ResponseHandler
+          type={notification.type}
+          message={notification.message}
+          details={notification.details}
+          onClear={clearNotification}
+        />
 
         <form onSubmit={handleSubmit} className="p-6">
           <div className="mb-6">
@@ -282,8 +362,10 @@ const UpdateCustomerModal = ({
             </label>
             <div className="flex items-center gap-4">
               <div 
-                onClick={() => fileInputRef.current.click()}
-                className="w-20 h-20 rounded-full border-2 border-dashed border-gray-300 flex items-center justify-center cursor-pointer hover:border-blue-400 transition-colors overflow-hidden"
+                onClick={() => !loading && fileInputRef.current.click()}
+                className={`w-20 h-20 rounded-full border-2 border-dashed border-gray-300 flex items-center justify-center cursor-pointer hover:border-blue-400 transition-colors overflow-hidden ${
+                  loading ? 'opacity-50 cursor-not-allowed' : ''
+                }`}
               >
                 {previewImage ? (
                   <img 
@@ -298,9 +380,9 @@ const UpdateCustomerModal = ({
               <div className="flex-1">
                 <button
                   type="button"
-                  onClick={() => fileInputRef.current.click()}
-                  className="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-md text-sm transition-colors"
-                  disabled={processing}
+                  onClick={() => !loading && fileInputRef.current.click()}
+                  disabled={loading}
+                  className="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-md text-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {formData.profile_pic ? "Change Photo" : "Upload Photo"}
                 </button>
@@ -314,7 +396,7 @@ const UpdateCustomerModal = ({
                 onChange={handleFileChange}
                 accept="image/*"
                 className="hidden"
-                disabled={processing}
+                disabled={loading}
               />
             </div>
           </div>
@@ -334,35 +416,31 @@ const UpdateCustomerModal = ({
                 value={formData.phone_number}
                 onChange={handleChange}
                 placeholder="Phone number"
-                className="flex-1 min-w-0 block w-full px-3 py-2 rounded-none rounded-r-md border border-gray-300 focus:ring-blue-500 focus:border-blue-500"
+                className="flex-1 min-w-0 block w-full px-3 py-2 rounded-none rounded-r-md border border-gray-300 focus:ring-blue-500 focus:border-blue-500 disabled:opacity-50"
                 required
                 maxLength={15}
-                disabled={processing}
+                disabled={loading}
               />
             </div>
           </div>
-
-          {error && (
-            <div className="mb-4 p-3 bg-red-50 text-red-600 text-sm rounded-md">
-              {error}
-            </div>
-          )}
 
           <div className="flex justify-end space-x-4 pt-4">
             <button
               type="button"
               onClick={closeModal}
-              disabled={processing}
+              disabled={loading}
               className="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
             >
               Cancel
             </button>
             <button
               type="submit"
-              disabled={processing}
-              className="flex items-center justify-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={loading}
+              className={`px-6 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 ${
+                loading ? "cursor-wait" : ""
+              }`}
             >
-              {processing ? (
+              {loading ? (
                 <>
                   <ArrowPathIcon className="animate-spin h-4 w-4 mr-2" />
                   Updating...

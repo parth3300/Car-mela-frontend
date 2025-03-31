@@ -29,7 +29,6 @@ const DialCodeSelector = ({ selectedCode, onChange }) => {
       dial.code.includes(search)
   );
 
-  // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
@@ -44,14 +43,14 @@ const DialCodeSelector = ({ selectedCode, onChange }) => {
   }, []);
 
   return (
-    <div className="relative w-1/3" ref={dropdownRef}>
+    <div className="relative w-24">
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full px-3 py-2 border border-gray-300 rounded-lg flex items-center justify-between focus:ring-2 focus:ring-blue-400 bg-white hover:bg-gray-50 transition-colors"
+        className="w-full px-3 py-2 h-full border border-gray-300 rounded-l-md flex items-center justify-between focus:ring-2 focus:ring-blue-400 bg-white hover:bg-gray-50 transition-colors"
       >
-        <div className="flex items-center gap-1">
-          <span className="text-lg">{selectedCode.flag}</span>
+      <div className="flex items-center gap-2 mr-[10px]">
+      <span className="text-lg">{selectedCode.flag}</span>
           <span className="font-medium">{selectedCode.code}</span>
         </div>
         <ChevronDownIcon 
@@ -64,7 +63,7 @@ const DialCodeSelector = ({ selectedCode, onChange }) => {
           initial={{ opacity: 0, y: -10, scale: 0.95 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
           exit={{ opacity: 0, y: -10, scale: 0.95 }}
-          className="absolute mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg z-20 overflow-hidden"
+          className="absolute mt-1 w-64 bg-white border border-gray-200 rounded-lg shadow-lg z-20 overflow-hidden"
         >
           <div className="p-2 border-b border-gray-100">
             <div className="relative">
@@ -130,7 +129,6 @@ const DialCodeSelector = ({ selectedCode, onChange }) => {
     </div>
   );
 };
-
 const CreateDealershipModal = ({ onClose, onCreated }) => {
   const [formData, setFormData] = useState({
     dealership_name: "",
@@ -142,7 +140,7 @@ const CreateDealershipModal = ({ onClose, onCreated }) => {
   });
 
   const [selectedDialCode, setSelectedDialCode] = useState(
-    DIAL_CODES.find(dial => dial.code === "+1") || DIAL_CODES[0]
+    DIAL_CODES.find(dial => dial.code === "+91") || DIAL_CODES[0]
   );
   const [previewImage, setPreviewImage] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -153,6 +151,7 @@ const CreateDealershipModal = ({ onClose, onCreated }) => {
   const authToken = localStorage.getItem("authToken");
   const fileInputRef = useRef(null);
   const modalRef = useRef(null);
+  const addressInputRef = useRef(null);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -211,6 +210,13 @@ const CreateDealershipModal = ({ onClose, onCreated }) => {
     setFormData({ ...formData, address: address.display_name });
     setAddressSuggestions([]);
     setShowSuggestions(false);
+  };
+
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter' && addressSuggestions.length > 0) {
+      e.preventDefault();
+      handleAddressSelect(addressSuggestions[0]);
+    }
   };
 
   const handleImageChange = (e) => {
@@ -388,12 +394,14 @@ const CreateDealershipModal = ({ onClose, onCreated }) => {
                 name="address"
                 value={formData.address}
                 onChange={handleAddressChange}
+                onKeyDown={handleKeyDown}
+                ref={addressInputRef}
                 required
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-400 outline-none"
                 placeholder="Search address..."
               />
               {showSuggestions && addressSuggestions.length > 0 && (
-                <ul className="absolute z-10 bg-white border border-gray-300 rounded-md w-full max-h-40 overflow-y-auto">
+                <ul className="absolute z-10 bg-white border border-gray-300 rounded-md w-full max-h-40 overflow-y-auto mt-1 shadow-lg">
                   {addressSuggestions.map((suggestion, index) => (
                     <li
                       key={index}

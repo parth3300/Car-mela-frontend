@@ -118,7 +118,6 @@ const CreateCarModal = ({ isOpen, closeModal, onCreateSuccess, carOwnerId }) => 
         const firstSuggestion = companySuggestions[0];
         handleCompanySelect(firstSuggestion);
       } else if (companiy_titles.includes(query)) {
-        console.log(query);
         handleCompanySelect(query);
       } else if (query) {
         setShowCompanyModal(true);

@@ -155,7 +155,6 @@ const UpdateCarModal = ({ isOpen, closeModal, car, onUpdateSuccess }) => {
         const firstSuggestion = companySuggestions[0];
         handleCompanySelect(firstSuggestion);
       } else if (companiy_titles.includes(query)){
-        console.log(query);        
         handleCompanySelect(query);
       } else if (query) {
         // If no suggestions and the query is not empty, open the CreateCompanyModal

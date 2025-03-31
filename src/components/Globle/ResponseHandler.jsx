@@ -60,13 +60,14 @@ const ResponseHandler = ({
 
     let message = '';
     let type = '';
-
+    
     if (success) {
       type = 'success';
       action = success.message
       message = typeof success === 'string' 
         ? success 
-        : defaultMessages[action] || 'Operation completed successfully!';
+        : defaultMessages[action] || success.message || 'Operation completed successfully!';
+
       notificationShownRef.current = true;
     } else if (error) {
       type = 'error';
@@ -92,8 +93,7 @@ const ResponseHandler = ({
       }
       notificationShownRef.current = true;
     }
-    console.log(success,message,action);
-
+    
     // Set the notification to be visible
     setVisibleNotification({ message, type });
 
