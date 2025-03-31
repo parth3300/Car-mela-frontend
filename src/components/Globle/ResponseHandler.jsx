@@ -97,7 +97,7 @@ const ResponseHandler = ({
     // Set the notification to be visible
     setVisibleNotification({ message, type });
 
-    // Set timer to hide the notification after 6 seconds
+    // Set timer to hide the notification after 4 seconds
     timerRef.current = setTimeout(() => {
       setVisibleNotification(null);
       if (onClear) onClear();
@@ -115,7 +115,7 @@ const ResponseHandler = ({
   };
 
   return (
-    <>
+    <div className="fixed top-16 left-0 right-0 z-50 flex justify-center">
       {visibleNotification && (
         <Notification
           message={visibleNotification.message}
@@ -123,7 +123,7 @@ const ResponseHandler = ({
           onClose={handleClose}
         />
       )}
-    </>
+    </div>
   );
 };
 

@@ -20,7 +20,8 @@ const FUEL_CHOICES = [
 ];
 
 const UpdateCarModal = ({ isOpen, closeModal, car, onUpdateSuccess }) => {
-  const [formData, setFormData] = useState({
+  // Initialize empty form data
+  const initialFormData = {
     title: "",
     company: "",
     carmodel: "",
@@ -31,8 +32,9 @@ const UpdateCarModal = ({ isOpen, closeModal, car, onUpdateSuccess }) => {
     description: "",
     price: "",
     ratings: "",
-  });
+  };
 
+  const [formData, setFormData] = useState(initialFormData);
   const [file, setFile] = useState(null);
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
@@ -44,33 +46,50 @@ const UpdateCarModal = ({ isOpen, closeModal, car, onUpdateSuccess }) => {
   const [companySuggestions, setCompanySuggestions] = useState([]);
   const [highlightedCompanyIndex, setHighlightedCompanyIndex] = useState(-1);
   const [highlightedColorIndex, setHighlightedColorIndex] = useState(-1);
+  const [showCompanyDropdown, setShowCompanyDropdown] = useState(false);
+  const [showColorDropdown, setShowColorDropdown] = useState(false);
 
-  // Refs for the modals
+  // Refs for the modals and dropdowns
   const modalRef = useRef(null);
   const companyModalRef = useRef(null);
+  const companyInputRef = useRef(null);
+  const colorInputRef = useRef(null);
 
-  // Close modal when clicking outside
+  // Reset form when modal opens or car changes
   useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (
-        modalRef.current &&
-        !modalRef.current.contains(event.target) &&
-        (!showCompanyModal || !companyModalRef.current?.contains(event.target))
-      ) {
-        closeModal();
+    if (isOpen && car) {
+      const newFormData = {
+        title: car.title || "",
+        company: car.company || "",
+        carmodel: car.carmodel || "",
+        color: car.color || "",
+        registration_year: car.registration_year || "",
+        fuel_type: car.fuel_type || "",
+        mileage: car.mileage || "",
+        description: car.description || "",
+        price: car.price || "",
+        ratings: car.ratings || "",
+      };
+      
+      setFormData(newFormData);
+      setFile(null);
+      setMessage("");
+      
+      // Set the search queries for company and color
+      if (car.company) {
+        const selectedCompany = companies.find((c) => c.id === car.company);
+        if (selectedCompany) {
+          setSearchCompanyQuery(selectedCompany.title);
+        }
       }
-    };
-
-    if (!showCompanyModal) {
-      document.addEventListener("mousedown", handleClickOutside);
+      
+      if (car.color) {
+        setSearchColorQuery(car.color);
+      }
     }
+  }, [isOpen, car, companies]);
 
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, [closeModal, showCompanyModal]);
-
-  // Fetch companies on mount
+  // Fetch companies when modal opens
   useEffect(() => {
     const fetchCompanies = async () => {
       try {
@@ -82,44 +101,18 @@ const UpdateCarModal = ({ isOpen, closeModal, car, onUpdateSuccess }) => {
       }
     };
 
-    fetchCompanies();
-  }, []);
-
-  // Populate form data when car is selected
-  useEffect(() => {
-    if (car) {
-      setFormData({
-        title: car.title || "",
-        company: car.company || "",
-        carmodel: car.carmodel || "",
-        color: car.color || "",
-        registration_year: car.registration_year || "",
-        fuel_type: car.fuel_type || "",
-        mileage: car.mileage || "",
-        description: car.description || "",
-        price: car.price || "",
-        ratings: car.ratings || "",
-      });
-
-      // Set the search queries for company and color
-      if (car.company) {
-        const selectedCompany = companies.find((c) => c.id === car.company);
-        if (selectedCompany) {
-          setSearchCompanyQuery(selectedCompany.title);
-        }
-      }
-
-      if (car.color) {
-        setSearchColorQuery(car.color);
-      }
+    if (isOpen) {
+      fetchCompanies();
     }
-  }, [car, companies]);
-  const companiy_titles = companies.map((company) => company.title.toLowerCase())
-  // Handle company search input change
+  }, [isOpen, showCompanyModal]);
+
+  const companiy_titles = companies.map((company) => company.title.toLowerCase());
+
   const handleCompanySearchChange = (e) => {
     const query = e.target.value;
     setSearchCompanyQuery(query);
     setHighlightedCompanyIndex(-1);
+    setShowCompanyDropdown(true);
 
     if (query) {
       const filteredCompanies = companies.filter((company) =>
@@ -127,41 +120,36 @@ const UpdateCarModal = ({ isOpen, closeModal, car, onUpdateSuccess }) => {
       );
       setCompanySuggestions(filteredCompanies);
     } else {
-      
-      setCompanySuggestions([]);
+      setCompanySuggestions(companies);
     }
   };
 
-
-  // Handle company selection from suggestions
   const handleCompanySelect = (company) => {
     if (company?.id) {
       setFormData({ ...formData, company: company.id });
       setSearchCompanyQuery(company.title);
-      
       setCompanySuggestions([]);
+      setShowCompanyDropdown(false);
+    } else {
+      setMessage("❌ Invalid company selected.");
     }
   };
 
-
-  // Handle company keydown events (arrow navigation)
   const handleCompanyKeyDown = (e) => {
     if (e.key === "Enter") {
       e.preventDefault();
       const query = searchCompanyQuery.trim().toLowerCase();
-      
-      // If there are suggestions, select the first one
-      if (companySuggestions.length > 0) {
+
+      if (highlightedCompanyIndex !== -1 && companySuggestions.length > 0) {
+        const selectedSuggestion = companySuggestions[highlightedCompanyIndex];
+        handleCompanySelect(selectedSuggestion);
+      } else if (companySuggestions.length > 0) {
         const firstSuggestion = companySuggestions[0];
         handleCompanySelect(firstSuggestion);
-      } else if (companiy_titles.includes(query)){
+      } else if (companiy_titles.includes(query)) {
         handleCompanySelect(query);
       } else if (query) {
-        // If no suggestions and the query is not empty, open the CreateCompanyModal
         setShowCompanyModal(true);
-      } else {
-        // If the input is empty, show all companies
-        setCompanySuggestions(companies);
       }
     } else if (e.key === "ArrowDown") {
       e.preventDefault();
@@ -173,14 +161,16 @@ const UpdateCarModal = ({ isOpen, closeModal, car, onUpdateSuccess }) => {
       setHighlightedCompanyIndex((prevIndex) =>
         prevIndex > 0 ? prevIndex - 1 : 0
       );
+    } else if (e.key === "Escape") {
+      setShowCompanyDropdown(false);
     }
   };
 
-  // Handle color search input change
   const handleColorSearchChange = (e) => {
     const query = e.target.value;
     setSearchColorQuery(query);
     setHighlightedColorIndex(-1);
+    setShowColorDropdown(true);
 
     if (query) {
       const filteredColors = colorNames.filter((color) =>
@@ -188,22 +178,17 @@ const UpdateCarModal = ({ isOpen, closeModal, car, onUpdateSuccess }) => {
       );
       setColorSuggestions(filteredColors);
     } else {
-      setColorSuggestions([]);
+      setColorSuggestions(colorNames);
     }
   };
 
-  // Handle color selection from suggestions
-  const handleColorSelect = (color) => {
-    setFormData({ ...formData, color });
-    setSearchColorQuery(color);
-    setColorSuggestions([]);
-  };
-
-  // Handle color keydown events (arrow navigation)
   const handleColorKeyDown = (e) => {
     if (e.key === "Enter") {
       e.preventDefault();
-      if (colorSuggestions.length > 0) {
+      if (highlightedColorIndex !== -1 && colorSuggestions.length > 0) {
+        const selectedColor = colorSuggestions[highlightedColorIndex];
+        handleColorSelect(selectedColor);
+      } else if (colorSuggestions.length > 0) {
         const firstSuggestion = colorSuggestions[0];
         handleColorSelect(firstSuggestion);
       }
@@ -217,20 +202,26 @@ const UpdateCarModal = ({ isOpen, closeModal, car, onUpdateSuccess }) => {
       setHighlightedColorIndex((prevIndex) =>
         prevIndex > 0 ? prevIndex - 1 : 0
       );
+    } else if (e.key === "Escape") {
+      setShowColorDropdown(false);
     }
   };
 
-  // Handle form input changes
+  const handleColorSelect = (color) => {
+    setFormData({ ...formData, color });
+    setSearchColorQuery(color);
+    setColorSuggestions([]);
+    setShowColorDropdown(false);
+  };
+
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  // Handle file input change
   const handleFileChange = (e) => {
     setFile(e.target.files[0]);
   };
 
-  // Handle form submission
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
@@ -278,13 +269,25 @@ const UpdateCarModal = ({ isOpen, closeModal, car, onUpdateSuccess }) => {
       }, 2000);
     } catch (error) {
       console.error("❌ Error updating car:", error);
-      setMessage("❌ Failed to update car. Please try again.");
+
+      let errorMessage = "An error occurred. Please try again.";
+      if (error.response) {
+        const { data } = error.response;
+        if (data && typeof data === "object") {
+          errorMessage = Object.values(data).flat().join(" ");
+        } else if (typeof data === "string") {
+          errorMessage = data;
+        }
+      } else {
+        errorMessage = "Network error. Please check your connection.";
+      }
+
+      setMessage(errorMessage);
     } finally {
       setLoading(false);
     }
   };
 
-  // Handle company creation
   const handleCompanyCreated = (newCompany) => {
     if (newCompany?.id) {
       setCompanies((prev) => [...prev, newCompany]);
@@ -296,7 +299,29 @@ const UpdateCarModal = ({ isOpen, closeModal, car, onUpdateSuccess }) => {
     }
   };
 
-  
+  // Close modal when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (
+        modalRef.current &&
+        !modalRef.current.contains(event.target) &&
+        (!showCompanyModal || !companyModalRef.current?.contains(event.target)) &&
+        !companyInputRef.current?.contains(event.target) &&
+        !colorInputRef.current?.contains(event.target)
+      ) {
+        closeModal();
+      }
+    };
+
+    if (!showCompanyModal) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [closeModal, showCompanyModal]);
+
   return (
     <>
       <AnimatePresence>
@@ -313,11 +338,13 @@ const UpdateCarModal = ({ isOpen, closeModal, car, onUpdateSuccess }) => {
               initial={{ scale: 0.8, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.8, opacity: 0 }}
-              style={{ maxHeight: "90vh", overflowY: "auto" }} // Add scrollbar
-
+              style={{ maxHeight: "90vh", overflowY: "auto" }}
             >
               <button
-                onClick={closeModal}
+                onClick={() => {
+                  setMessage("");
+                  closeModal();
+                }}
                 className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition"
               >
                 <XMarkIcon className="h-6 w-6" />
@@ -352,7 +379,7 @@ const UpdateCarModal = ({ isOpen, closeModal, car, onUpdateSuccess }) => {
                       />
                     </div>
 
-                    <div>
+                    <div ref={companyInputRef}>
                       <label className="block text-gray-700">Company:</label>
                       <div className="relative">
                         <input
@@ -361,11 +388,12 @@ const UpdateCarModal = ({ isOpen, closeModal, car, onUpdateSuccess }) => {
                           value={searchCompanyQuery}
                           onChange={handleCompanySearchChange}
                           onKeyDown={handleCompanyKeyDown}
+                          onFocus={() => setShowCompanyDropdown(true)}
                           className="w-full p-2 border rounded-md"
                           required
                         />
-                        {companySuggestions.length > 0 && (
-                          <div className="absolute z-10 mt-1 w-full bg-white border border-gray-300 rounded-md shadow-lg">
+                        {showCompanyDropdown && companySuggestions.length > 0 && (
+                          <div className="absolute z-10 mt-1 w-full bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto">
                             {companySuggestions.map((company, index) => (
                               <div
                                 key={company.id}
@@ -379,9 +407,12 @@ const UpdateCarModal = ({ isOpen, closeModal, car, onUpdateSuccess }) => {
                             ))}
                           </div>
                         )}
-                        {(!companiy_titles.includes(searchCompanyQuery.toLowerCase()) || !searchCompanyQuery) && (
+                        {searchCompanyQuery && 
+                          !companySuggestions.some(c => 
+                            c.title.toLowerCase() === searchCompanyQuery.toLowerCase()
+                          ) && !companiy_titles.includes(searchCompanyQuery.toLowerCase()) && (
                           <p className="text-sm text-gray-500 mt-1">
-                            Company is not available. Press <span className="font-semibold">Enter</span> to create company.
+                            Company not found. Press <span className="font-semibold">Enter</span> to create company.
                           </p>
                         )}
                       </div>
@@ -399,7 +430,7 @@ const UpdateCarModal = ({ isOpen, closeModal, car, onUpdateSuccess }) => {
                       />
                     </div>
 
-                    <div>
+                    <div ref={colorInputRef}>
                       <label className="block text-gray-700">Color:</label>
                       <div className="relative">
                         <input
@@ -408,10 +439,11 @@ const UpdateCarModal = ({ isOpen, closeModal, car, onUpdateSuccess }) => {
                           value={searchColorQuery}
                           onChange={handleColorSearchChange}
                           onKeyDown={handleColorKeyDown}
+                          onFocus={() => setShowColorDropdown(true)}
                           className="w-full p-2 border rounded-md"
                         />
-                        {colorSuggestions.length > 0 && (
-                          <div className="absolute z-10 mt-1 w-full bg-white border border-gray-300 rounded-md shadow-lg">
+                        {showColorDropdown && colorSuggestions.length > 0 && (
+                          <div className="absolute z-10 mt-1 w-full bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto">
                             {colorSuggestions.map((color, index) => (
                               <div
                                 key={color}
@@ -477,10 +509,10 @@ const UpdateCarModal = ({ isOpen, closeModal, car, onUpdateSuccess }) => {
                         onChange={handleChange}
                         onInput={(e) => {
                           if (e.target.value.length > 2) {
-                            e.target.value = e.target.value.slice(0, 2); // trim to 2 digits
+                            e.target.value = e.target.value.slice(0, 2);
                           }
                         }}
-                        max="99" // Optional but reinforces the limit
+                        max="99"
                         className="w-full p-2 border rounded-md"
                         required
                       />
@@ -533,17 +565,41 @@ const UpdateCarModal = ({ isOpen, closeModal, car, onUpdateSuccess }) => {
                     required
                   />
                 </div>
-
+                
                 <button
                   type="submit"
                   disabled={loading}
-                  className={`w-full p-2 rounded-md text-white transition ${
-                    loading
-                      ? "bg-gray-400 cursor-not-allowed"
-                      : "bg-blue-600 hover:bg-blue-700"
+                  className={`px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center min-w-[120px] ${
+                    loading ? "bg-blue-700 cursor-wait" : ""
                   }`}
                 >
-                  {loading ? "Updating..." : "Update Car"}
+                  {loading ? (
+                    <>
+                    <svg
+                      className="animate-spin -ml-1 mr-2 h-4 w-4 text-white"
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                    >
+                      <circle
+                        className="opacity-25"
+                        cx="12"
+                        cy="12"
+                        r="10"
+                        stroke="currentColor"
+                        strokeWidth="4"
+                      ></circle>
+                      <path
+                        className="opacity-75"
+                        fill="currentColor"
+                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                      ></path>
+                    </svg>
+                    Updating...
+                  </>
+                  ) : (
+                    "Update"
+                  )}
                 </button>
               </form>
 
@@ -568,6 +624,7 @@ const UpdateCarModal = ({ isOpen, closeModal, car, onUpdateSuccess }) => {
             onClose={() => setShowCompanyModal(false)}
             onCreated={handleCompanyCreated}
             modalRef={companyModalRef}
+            initialTitle={searchCompanyQuery}
           />
         )}
       </AnimatePresence>

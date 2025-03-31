@@ -9,6 +9,7 @@ import CreateCarModal from "./CreateCarModal";
 import UpdateCarModal from "./UpdateCarModal";
 import { XMarkIcon, PencilSquareIcon, TrashIcon } from "@heroicons/react/24/solid";
 import SkeletonLoader from "../../components/SkeletonLoader";
+import ResponseHandler from "../../components/Globle/ResponseHandler";
 
 const Car = () => {
   const [cars, setCars] = useState([]);
@@ -18,9 +19,18 @@ const Car = () => {
   const [isCreateCarModalOpen, setIsCreateCarModalOpen] = useState(false);
   const [isUpdateCarModalOpen, setIsUpdateCarModalOpen] = useState(false);
   const [selectedCar, setSelectedCar] = useState(null);
-  const [notification, setNotification] = useState({ message: "", type: "" });
-  const [selectedCars, setSelectedCars] = useState([]); // Track selected cars for deletion
-  const [isDeleteMode, setIsDeleteMode] = useState(false); // Toggle delete mode
+  const [selectedCars, setSelectedCars] = useState([]);
+  const [isDeleteMode, setIsDeleteMode] = useState(false);
+  
+  // State for response handling
+  const [notification, setNotification] = useState({
+    message: "",
+    type: "",
+    action: "" // 'create', 'update', or 'delete'
+  });
+  const [processing, setProcessing] = useState(false);
+  const [deleteProcessing, setDeleteProcessing] = useState(false);
+  const [updateProcessing, setUpdateProcessing] = useState(false);
 
   const authToken = localStorage.getItem("authToken");
 
@@ -34,8 +44,9 @@ const Car = () => {
       } catch (error) {
         console.error("Error fetching car data:", error);
         setNotification({
-          message: "Failed to fetch cars. Please try again later.",
+          message: error.message || "Failed to fetch cars. Please try again later.",
           type: "error",
+          action: ""
         });
       } finally {
         setLoading(false);
@@ -68,10 +79,9 @@ const Car = () => {
     if (selectedCars.length === 0) return;
 
     try {
-      setLoading(true);
+      setDeleteProcessing(true);
       const authToken = localStorage.getItem("authToken");
       
-      // Delete each selected car
       await Promise.all(
         selectedCars.map(carId =>
           axios.delete(`${BACKEND_URL}/store/cars/${carId}/`, {
@@ -82,7 +92,6 @@ const Car = () => {
         )
       );
 
-      // Update the cars list
       setCars(prev => prev.filter(car => !selectedCars.includes(car.id)));
       setSelectedCars([]);
       setIsDeleteMode(false);
@@ -90,20 +99,17 @@ const Car = () => {
       setNotification({
         message: `${selectedCars.length} car(s) deleted successfully!`,
         type: "success",
+        action: "delete"
       });
     } catch (error) {
       console.error("Error deleting cars:", error);
       setNotification({
-        message: "Failed to delete cars. Please try again.",
+        message: error.message || "Failed to delete cars. Please try again.",
         type: "error",
+        action: "delete"
       });
     } finally {
-      setLoading(false);
-      
-      // Clear notification after 5 seconds
-      setTimeout(() => {
-        setNotification({ message: "", type: "" });
-      }, 5000);
+      setDeleteProcessing(false);
     }
   };
 
@@ -114,8 +120,9 @@ const Car = () => {
     setNotification({
       message: "Car created successfully! 🎉",
       type: "success",
+      action: "create"
     });
-    setTimeout(() => setNotification({ message: "", type: "" }), 5000);
+    setProcessing(false);
   };
 
   // Handle successful car update
@@ -127,30 +134,21 @@ const Car = () => {
     setNotification({
       message: "Car updated successfully! 🎉",
       type: "success",
+      action: "update"
     });
-    setTimeout(() => setNotification({ message: "", type: "" }), 5000);
+    setUpdateProcessing(false);
   };
 
   return (
     <div className="bg-gradient-to-b from-blue-50 to-white min-h-screen p-8 flex flex-col items-center">
-      {/* Notification */}
-      <AnimatePresence>
-        {notification.message && (
-          <motion.div
-            className="fixed top-4 right-4 p-4 rounded-lg shadow-lg z-50"
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-            style={{
-              backgroundColor:
-                notification.type === "success" ? "#D1FAE5" : "#FEE2E2",
-              color: notification.type === "success" ? "#065F46" : "#991B1B",
-            }}
-          >
-            {notification.message}
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {/* Response Handler */}
+      <ResponseHandler
+        resourceName="Car"
+        action={processing ? "create" : updateProcessing ? "update" : deleteProcessing ? "delete" : ""}
+        error={notification.type === "error" ? { message: notification.message } : null}
+        success={notification.type === "success" ? { message: notification.message } : null}
+        onClear={() => setNotification({ message: "", type: "", action: "" })}
+      />
 
       {/* Title */}
       <motion.h1
@@ -194,21 +192,22 @@ const Car = () => {
             <>
               <button
                 onClick={deleteSelectedCars}
-                disabled={selectedCars.length === 0}
+                disabled={selectedCars.length === 0 || deleteProcessing}
                 className={`px-4 py-3 rounded-lg shadow-md transition-all duration-300 ${
-                  selectedCars.length === 0
+                  selectedCars.length === 0 || deleteProcessing
                     ? "bg-gray-400 cursor-not-allowed"
                     : "bg-red-600 hover:bg-red-700 text-white"
                 }`}
               >
-                Delete ({selectedCars.length})
+                {deleteProcessing ? "Deleting..." : `Delete (${selectedCars.length})`}
               </button>
               <button
                 onClick={() => {
                   setIsDeleteMode(false);
                   setSelectedCars([]);
                 }}
-                className="px-4 py-3 bg-gray-500 text-white rounded-lg shadow-md hover:bg-gray-600 transition-all duration-300"
+                disabled={deleteProcessing}
+                className="px-4 py-3 bg-gray-500 text-white rounded-lg shadow-md hover:bg-gray-600 transition-all duration-300 disabled:bg-gray-400"
               >
                 Cancel
               </button>
@@ -255,101 +254,100 @@ const Car = () => {
                 : "border-gray-100 hover:border-blue-200"
             } hover:shadow-2xl`}>
 
+              {isDeleteMode ? (
+                <div 
+                  className={`relative cursor-pointer ${selectedCars.includes(car.id) ? 'ring-2 ring-green-500' : ''} ${
+                    [8, 9, 10].includes(car.id) ? 'cursor-not-allowed opacity-70' : ''
+                  }`}
+                  onClick={() => ![8, 9, 10].includes(car.id) && toggleCarSelection(car.id)}
+                >
+                  {/* Checkbox in top-left corner */}
+                  <div className="absolute top-2 left-2 z-10">
+                    <div className={`flex items-center justify-center w-8 h-8 rounded-full transition-all duration-200 ${
+                      selectedCars.includes(car.id) 
+                        ? "bg-green-500" 
+                        : [8, 9, 10].includes(car.id) 
+                          ? "bg-gray-300 border-2 border-gray-400" 
+                          : "bg-white/80 border-2 border-gray-300"
+                    }`}>
+                      {selectedCars.includes(car.id) && (
+                        <svg 
+                          className="w-5 h-5 text-white"
+                          fill="none" 
+                          stroke="currentColor" 
+                          viewBox="0 0 24 24"
+                        >
+                          <path 
+                            strokeLinecap="round" 
+                            strokeLinejoin="round" 
+                            strokeWidth={3} 
+                            d="M5 13l4 4L19 7" 
+                          />
+                        </svg>
+                      )}
+                      {[8, 9, 10].includes(car.id) && (
+                        <svg 
+                          className="w-4 h-4 text-gray-600"
+                          fill="none" 
+                          stroke="currentColor" 
+                          viewBox="0 0 24 24"
+                        >
+                          <path 
+                            strokeLinecap="round" 
+                            strokeLinejoin="round" 
+                            strokeWidth={3} 
+                            d="M6 18L18 6M6 6l12 12" 
+                          />
+                        </svg>
+                      )}
+                    </div>
+                  </div>
 
-{isDeleteMode ? (
-  <div 
-    className={`relative cursor-pointer ${selectedCars.includes(car.id) ? 'ring-2 ring-green-500' : ''} ${
-      [8, 9, 10].includes(car.id) ? 'cursor-not-allowed opacity-70' : ''
-    }`}
-    onClick={() => ![8, 9, 10].includes(car.id) && toggleCarSelection(car.id)}
-  >
-    {/* Checkbox in top-left corner */}
-    <div className="absolute top-2 left-2 z-10">
-      <div className={`flex items-center justify-center w-8 h-8 rounded-full transition-all duration-200 ${
-        selectedCars.includes(car.id) 
-          ? "bg-green-500" 
-          : [8, 9, 10].includes(car.id) 
-            ? "bg-gray-300 border-2 border-gray-400" 
-            : "bg-white/80 border-2 border-gray-300"
-      }`}>
-        {selectedCars.includes(car.id) && (
-          <svg 
-            className="w-5 h-5 text-white"
-            fill="none" 
-            stroke="currentColor" 
-            viewBox="0 0 24 24"
-          >
-            <path 
-              strokeLinecap="round" 
-              strokeLinejoin="round" 
-              strokeWidth={3} 
-              d="M5 13l4 4L19 7" 
-            />
-          </svg>
-        )}
-        {[8, 9, 10].includes(car.id) && (
-          <svg 
-            className="w-4 h-4 text-gray-600"
-            fill="none" 
-            stroke="currentColor" 
-            viewBox="0 0 24 24"
-          >
-            <path 
-              strokeLinecap="round" 
-              strokeLinejoin="round" 
-              strokeWidth={3} 
-              d="M6 18L18 6M6 6l12 12" 
-            />
-          </svg>
-        )}
-      </div>
-    </div>
-
-    {/* Car Image and Content */}
-    <motion.div
-      className="relative w-full h-[300px] flex justify-center items-center bg-blue-50"
-      whileHover={{ scale: ![8, 9, 10].includes(car.id) ? 1.02 : 1 }}
-    >
-      <img
-        className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-        src={car.image || "https://via.placeholder.com/300?text=No+Image"}
-        alt={car.title}
-      />
-      <div className="absolute inset-0 bg-black bg-opacity-50 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-center items-center text-white px-4">
-        <div className="text-2xl font-bold mb-2">{car.title}</div>
-        <div className="text-sm text-blue-300 mt-2">
-          {car.carowner ? `Owned by ${car.carowner.name}` : "Not Owned Yet"}
-        </div>
-        {[8, 9, 10].includes(car.id) && (
-          <div className="text-red-300 text-sm mt-2">
-            This car cannot be deleted
-          </div>
-        )}
-      </div>
-    </motion.div>
-  </div>
-) : (
-  <Link to={`/cars/${car.id}`}>
-    <motion.div
-      className="relative w-full h-[300px] flex justify-center items-center bg-blue-50"
-      whileHover={{ scale: 1.02 }}
-    >
-      <img
-        className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-        src={car.image || "https://via.placeholder.com/300?text=No+Image"}
-        alt={car.title}
-      />
-      <div className="absolute inset-0 bg-black bg-opacity-50 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-center items-center text-white px-4">
-        <div className="text-2xl font-bold mb-2">{car.title}</div>
-        <div className="text-lg mb-2">${car.price}</div>
-        <StarRating rating={parseFloat(car.average_rating)} />
-        <div className="text-sm text-blue-300 mt-2">
-          {car.carowner ? `Owned by ${car.carowner.name}` : "Not Owned Yet"}
-        </div>
-      </div>
-    </motion.div>
-  </Link>
-)}
+                  {/* Car Image and Content */}
+                  <motion.div
+                    className="relative w-full h-[300px] flex justify-center items-center bg-blue-50"
+                    whileHover={{ scale: ![8, 9, 10].includes(car.id) ? 1.02 : 1 }}
+                  >
+                    <img
+                      className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                      src={car.image || "https://via.placeholder.com/300?text=No+Image"}
+                      alt={car.title}
+                    />
+                    <div className="absolute inset-0 bg-black bg-opacity-50 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-center items-center text-white px-4">
+                      <div className="text-2xl font-bold mb-2">{car.title}</div>
+                      <div className="text-sm text-blue-300 mt-2">
+                        {car.carowner ? `Owned by ${car.carowner.name}` : "Not Owned Yet"}
+                      </div>
+                      {[8, 9, 10].includes(car.id) && (
+                        <div className="text-red-300 text-sm mt-2">
+                          This car cannot be deleted
+                        </div>
+                      )}
+                    </div>
+                  </motion.div>
+                </div>
+              ) : (
+                <Link to={`/cars/${car.id}`}>
+                  <motion.div
+                    className="relative w-full h-[300px] flex justify-center items-center bg-blue-50"
+                    whileHover={{ scale: 1.02 }}
+                  >
+                    <img
+                      className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                      src={car.image || "https://via.placeholder.com/300?text=No+Image"}
+                      alt={car.title}
+                    />
+                    <div className="absolute inset-0 bg-black bg-opacity-50 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-center items-center text-white px-4">
+                      <div className="text-2xl font-bold mb-2">{car.title}</div>
+                      <div className="text-lg mb-2">${car.price}</div>
+                      <StarRating rating={parseFloat(car.average_rating)} />
+                      <div className="text-sm text-blue-300 mt-2">
+                        {car.carowner ? `Owned by ${car.carowner.name}` : "Not Owned Yet"}
+                      </div>
+                    </div>
+                  </motion.div>
+                </Link>
+              )}
 
               {/* Bottom Info */}
               <div className="p-4 bg-gradient-to-r from-blue-100 to-white">
@@ -364,7 +362,8 @@ const Car = () => {
               {/* Update Button (hidden in delete mode) */}
               {authToken && ![8, 9, 10].includes(car.id) && !isDeleteMode && (
                 <button
-                  onClick={() => {
+                  onClick={(e) => {
+                    e.preventDefault();
                     setSelectedCar(car);
                     setIsUpdateCarModalOpen(true);
                   }}
@@ -398,16 +397,20 @@ const Car = () => {
       {/* Create Car Modal */}
       <CreateCarModal
         isOpen={isCreateCarModalOpen}
-        closeModal={() => setIsCreateCarModalOpen(false)}
+        closeModal={() => !processing && setIsCreateCarModalOpen(false)}
         onCreateSuccess={handleCreateCarSuccess}
+        processing={processing}
+        setProcessing={setProcessing}
       />
 
       {/* Update Car Modal */}
       <UpdateCarModal
         isOpen={isUpdateCarModalOpen}
-        closeModal={() => setIsUpdateCarModalOpen(false)}
+        closeModal={() => !updateProcessing && setIsUpdateCarModalOpen(false)}
         car={selectedCar}
         onUpdateSuccess={handleUpdateCarSuccess}
+        processing={updateProcessing}
+        setProcessing={setUpdateProcessing}
       />
     </div>
   );

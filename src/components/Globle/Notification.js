@@ -1,45 +1,31 @@
-import React, { useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { CheckCircleIcon } from "@heroicons/react/24/solid";
+import React from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { XMarkIcon } from '@heroicons/react/24/solid';
 
-const Notification = ({ message, type = "success", onClose }) => {
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      onClose();
-    }, 3000); // Auto close after 3 seconds
-    return () => clearTimeout(timer);
-  }, [onClose]);
-
-  const colors = {
-    success: "bg-green-500",
-    error: "bg-red-500",
-    info: "bg-blue-500",
-  };
+const Notification = ({ message, type, onClose }) => {
+  const bgColor = type === 'success' ? 'bg-green-100' : 'bg-red-100';
+  const textColor = type === 'success' ? 'text-green-800' : 'text-red-800';
+  const borderColor = type === 'success' ? 'border-green-300' : 'border-red-300';
 
   return (
     <AnimatePresence>
-      {message && (
-        <motion.div
-          initial={{ opacity: 0, y: -30 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -30 }}
-          className={`fixed top-5 right-5 z-50 flex items-center gap-3 px-4 py-3 rounded-xl shadow-xl text-white ${colors[type]}`}
+      <motion.div
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: -20 }}
+        transition={{ duration: 0.3 }}
+        className={`${bgColor} ${textColor} ${borderColor} border rounded-lg shadow-lg p-4 max-w-md w-full flex items-center justify-between`}
+      >
+        <div className="flex-1">
+          {message}
+        </div>
+        <button
+          onClick={onClose}
+          className={`ml-4 p-1 rounded-full hover:${type === 'success' ? 'bg-green-200' : 'bg-red-200'} transition-colors`}
         >
-          {/* Animated Green Tick */}
-          {type === "success" && (
-            <motion.div
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
-              transition={{ type: "spring", stiffness: 300, damping: 20 }}
-            >
-              <CheckCircleIcon className="h-6 w-6 text-white" />
-            </motion.div>
-          )}
-
-          {/* Message */}
-          <div className="text-sm font-medium">{message}</div>
-        </motion.div>
-      )}
+          <XMarkIcon className="h-5 w-5" />
+        </button>
+      </motion.div>
     </AnimatePresence>
   );
 };

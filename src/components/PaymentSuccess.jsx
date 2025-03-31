@@ -38,14 +38,33 @@ const PaymentSuccess = () => {
       const response = await axios.get(`${BACKEND_URL}/store/verify-payment/${sessionId}/`, {
         headers: { Authorization: `Bearer ${authToken}` },
       });
-
       const carDetails = await axios.get(`${BACKEND_URL}/store/cars/${response?.data?.car_id}/`, {
+        headers: { Authorization: `Bearer ${authToken}` },
+      });
+
+      const carOwnerDetails = await axios.get(`${BACKEND_URL}/store/carowners/${response?.data?.carowner_id}/`, {
         headers: { Authorization: `Bearer ${authToken}` },
       });
       // Extract only the needed properties from the payment intent
       const paymentIntent = response.data.session.payment_intent;
       const amountTotal = response.data.session.amount_total / 100;
+      delete carDetails.data.id
+      delete carDetails.data.ratings
+      delete carDetails.data.company
+      delete carDetails.data.carowner
+      delete carDetails.data.reviews
+      delete carDetails.data.dealerships
+      delete carDetails.data.average_rating
+      delete carDetails.data.last_update
 
+
+      delete carOwnerDetails.data.id
+      delete carOwnerDetails.data.user
+      delete carOwnerDetails.data.view_cars
+      delete carOwnerDetails.data.dial_code
+
+      console.log(carDetails,carOwnerDetails);
+      
       setPaymentStatus({
         loading: false,
         success: true,
@@ -56,13 +75,7 @@ const PaymentSuccess = () => {
           amount: amountTotal,
           date: new Date().toISOString(),
         },
-        customerDetails: {
-          id: response.data.user_id,
-          name: response.data.user_name,
-          email: response.data.user_email,
-          dial_code: "+1",
-          phone_number: "555-123-4567",
-        },
+        customerDetails: carOwnerDetails.data
       });
     } catch (error) {
       console.error("Payment verification failed:", error);
@@ -72,7 +85,7 @@ const PaymentSuccess = () => {
         error: error.response?.data?.message || "Payment verification failed",
         carDetails: null,
         paymentDetails: null,
-        customerDetails: null,
+        customerDetails: null
       });
     }
   };
@@ -303,7 +316,7 @@ const PaymentSuccess = () => {
                 </button>
                 <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto">
                   <button
-                    onClick={() => navigate("/account/orders")}
+                    onClick={() => navigate(`/cars/${paymentStatus.carDetails.id}`)}
                     className="flex-1 px-6 py-3 border border-gray-300 rounded-md shadow-sm text-base font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
                   >
                     View Your Orders
@@ -349,10 +362,10 @@ const PaymentSuccess = () => {
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
                 <button
-                  onClick={() => navigate("/cars")}
+                  onClick={() => navigate("/")}
                   className="px-6 py-3 border border-transparent rounded-md shadow-sm text-base font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
                 >
-                  Back to Cars
+                  Back to Home Page
                 </button>
                 <button
                   onClick={() => navigate("/support")}

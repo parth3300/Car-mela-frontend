@@ -287,10 +287,11 @@ const CreateCarOwnerModal = ({ isOpen, closeModal, onCreateSuccess }) => {
       );
 
       setNotification({
-        type: 'success',
-        message: 'Registration successful!',
-        details: 'You are now a registered car owner'
+        type: "success",
+        message: "Registration successful!",
+        details: "You're now a registered car owner! You can now sell cars",
       });
+      
 
       setFormData({ 
         dial_code: DIAL_CODES[0],
@@ -545,7 +546,7 @@ const CreateCarOwnerModal = ({ isOpen, closeModal, onCreateSuccess }) => {
               </h3>
 
               <p className="text-gray-600 mb-6">
-                You're now a registered car owner.
+                You're now a registered car owner! You can now sell cars.
               </p>
 
               <button

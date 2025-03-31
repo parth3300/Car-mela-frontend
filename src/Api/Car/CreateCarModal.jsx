@@ -46,10 +46,14 @@ const CreateCarModal = ({ isOpen, closeModal, onCreateSuccess, carOwnerId }) => 
   const [companySuggestions, setCompanySuggestions] = useState([]);
   const [highlightedCompanyIndex, setHighlightedCompanyIndex] = useState(-1);
   const [highlightedColorIndex, setHighlightedColorIndex] = useState(-1);
+  const [showCompanyDropdown, setShowCompanyDropdown] = useState(false);
+  const [showColorDropdown, setShowColorDropdown] = useState(false);
 
-  // Refs for the modals
+  // Refs for the modals and dropdowns
   const modalRef = useRef(null);
   const companyModalRef = useRef(null);
+  const companyInputRef = useRef(null);
+  const colorInputRef = useRef(null);
 
   // Reset form when modal opens
   useEffect(() => {
@@ -63,6 +67,8 @@ const CreateCarModal = ({ isOpen, closeModal, onCreateSuccess, carOwnerId }) => 
       setCompanySuggestions([]);
       setHighlightedCompanyIndex(-1);
       setHighlightedColorIndex(-1);
+      setShowCompanyDropdown(false);
+      setShowColorDropdown(false);
     }
   }, [isOpen]);
 
@@ -80,7 +86,7 @@ const CreateCarModal = ({ isOpen, closeModal, onCreateSuccess, carOwnerId }) => 
     if (isOpen) {
       fetchCompanies();
     }
-  }, [isOpen]);
+  }, [isOpen, showCompanyModal]);
 
   const companiy_titles = companies.map((company) => company.title.toLowerCase());
 
@@ -88,6 +94,7 @@ const CreateCarModal = ({ isOpen, closeModal, onCreateSuccess, carOwnerId }) => 
     const query = e.target.value;
     setSearchCompanyQuery(query);
     setHighlightedCompanyIndex(-1);
+    setShowCompanyDropdown(true);
 
     if (query) {
       const filteredCompanies = companies.filter((company) =>
@@ -95,7 +102,7 @@ const CreateCarModal = ({ isOpen, closeModal, onCreateSuccess, carOwnerId }) => 
       );
       setCompanySuggestions(filteredCompanies);
     } else {
-      setCompanySuggestions([]);
+      setCompanySuggestions(companies);
     }
   };
 
@@ -104,6 +111,7 @@ const CreateCarModal = ({ isOpen, closeModal, onCreateSuccess, carOwnerId }) => 
       setFormData({ ...formData, company: company.id });
       setSearchCompanyQuery(company.title);
       setCompanySuggestions([]);
+      setShowCompanyDropdown(false);
     } else {
       setMessage("❌ Invalid company selected.");
     }
@@ -114,15 +122,16 @@ const CreateCarModal = ({ isOpen, closeModal, onCreateSuccess, carOwnerId }) => 
       e.preventDefault();
       const query = searchCompanyQuery.trim().toLowerCase();
 
-      if (companySuggestions.length > 0) {
+      if (highlightedCompanyIndex !== -1 && companySuggestions.length > 0) {
+        const selectedSuggestion = companySuggestions[highlightedCompanyIndex];
+        handleCompanySelect(selectedSuggestion);
+      } else if (companySuggestions.length > 0) {
         const firstSuggestion = companySuggestions[0];
         handleCompanySelect(firstSuggestion);
       } else if (companiy_titles.includes(query)) {
         handleCompanySelect(query);
       } else if (query) {
         setShowCompanyModal(true);
-      } else {
-        setCompanySuggestions(companies);
       }
     } else if (e.key === "ArrowDown") {
       e.preventDefault();
@@ -134,6 +143,8 @@ const CreateCarModal = ({ isOpen, closeModal, onCreateSuccess, carOwnerId }) => 
       setHighlightedCompanyIndex((prevIndex) =>
         prevIndex > 0 ? prevIndex - 1 : 0
       );
+    } else if (e.key === "Escape") {
+      setShowCompanyDropdown(false);
     }
   };
 
@@ -141,6 +152,7 @@ const CreateCarModal = ({ isOpen, closeModal, onCreateSuccess, carOwnerId }) => 
     const query = e.target.value;
     setSearchColorQuery(query);
     setHighlightedColorIndex(-1);
+    setShowColorDropdown(true);
 
     if (query) {
       const filteredColors = colorNames.filter((color) =>
@@ -148,14 +160,17 @@ const CreateCarModal = ({ isOpen, closeModal, onCreateSuccess, carOwnerId }) => 
       );
       setColorSuggestions(filteredColors);
     } else {
-      setColorSuggestions([]);
+      setColorSuggestions(colorNames);
     }
   };
 
   const handleColorKeyDown = (e) => {
     if (e.key === "Enter") {
       e.preventDefault();
-      if (colorSuggestions.length > 0) {
+      if (highlightedColorIndex !== -1 && colorSuggestions.length > 0) {
+        const selectedColor = colorSuggestions[highlightedColorIndex];
+        handleColorSelect(selectedColor);
+      } else if (colorSuggestions.length > 0) {
         const firstSuggestion = colorSuggestions[0];
         handleColorSelect(firstSuggestion);
       }
@@ -169,10 +184,8 @@ const CreateCarModal = ({ isOpen, closeModal, onCreateSuccess, carOwnerId }) => 
       setHighlightedColorIndex((prevIndex) =>
         prevIndex > 0 ? prevIndex - 1 : 0
       );
-    } else if (e.key === "Enter" && highlightedColorIndex !== -1) {
-      e.preventDefault();
-      const selectedColor = colorSuggestions[highlightedColorIndex];
-      handleColorSelect(selectedColor);
+    } else if (e.key === "Escape") {
+      setShowColorDropdown(false);
     }
   };
 
@@ -180,6 +193,7 @@ const CreateCarModal = ({ isOpen, closeModal, onCreateSuccess, carOwnerId }) => 
     setFormData({ ...formData, color });
     setSearchColorQuery(color);
     setColorSuggestions([]);
+    setShowColorDropdown(false);
   };
 
   const handleChange = (e) => {
@@ -204,6 +218,7 @@ const CreateCarModal = ({ isOpen, closeModal, onCreateSuccess, carOwnerId }) => 
     }
     return cookieValue;
   };
+  console.log('hi3',carOwnerId);
   
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -240,7 +255,6 @@ const CreateCarModal = ({ isOpen, closeModal, onCreateSuccess, carOwnerId }) => 
     data.append("description", formData.description);
     data.append("price", formData.price);
     data.append("ratings", formData.ratings);
-    data.append("carowner", carOwnerId);
 
     try {
       const response = await axios.post(`${BACKEND_URL}/store/cars/`, data, {
@@ -318,7 +332,9 @@ const CreateCarModal = ({ isOpen, closeModal, onCreateSuccess, carOwnerId }) => 
       if (
         modalRef.current &&
         !modalRef.current.contains(event.target) &&
-        (!showCompanyModal || !companyModalRef.current?.contains(event.target))
+        (!showCompanyModal || !companyModalRef.current?.contains(event.target)) &&
+        !companyInputRef.current?.contains(event.target) &&
+        !colorInputRef.current?.contains(event.target)
       ) {
         closeModal();
       }
@@ -333,6 +349,7 @@ const CreateCarModal = ({ isOpen, closeModal, onCreateSuccess, carOwnerId }) => 
     };
   }, [closeModal, showCompanyModal]);
 
+  
   return (
     <>
       <AnimatePresence>
@@ -391,7 +408,7 @@ const CreateCarModal = ({ isOpen, closeModal, onCreateSuccess, carOwnerId }) => 
                       />
                     </div>
 
-                    <div>
+                    <div ref={companyInputRef}>
                       <label className="block text-gray-700">Company:</label>
                       <div className="relative">
                         <input
@@ -400,11 +417,12 @@ const CreateCarModal = ({ isOpen, closeModal, onCreateSuccess, carOwnerId }) => 
                           value={searchCompanyQuery}
                           onChange={handleCompanySearchChange}
                           onKeyDown={handleCompanyKeyDown}
+                          onFocus={() => setShowCompanyDropdown(true)}
                           className="w-full p-2 border rounded-md"
                           required
                         />
-                        {companySuggestions.length > 0 && (
-                          <div className="absolute z-10 mt-1 w-full bg-white border border-gray-300 rounded-md shadow-lg">
+                        {showCompanyDropdown && companySuggestions.length > 0 && (
+                          <div className="absolute z-10 mt-1 w-full bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto">
                             {companySuggestions.map((company, index) => (
                               <div
                                 key={company.id}
@@ -418,9 +436,12 @@ const CreateCarModal = ({ isOpen, closeModal, onCreateSuccess, carOwnerId }) => 
                             ))}
                           </div>
                         )}
-                        {(!companiy_titles.includes(searchCompanyQuery.toLowerCase()) || !searchCompanyQuery) && (
+                        {searchCompanyQuery && 
+                          !companySuggestions.some(c => 
+                            c.title.toLowerCase() === searchCompanyQuery.toLowerCase()
+                          ) && !companiy_titles.includes(searchCompanyQuery.toLowerCase()) && (
                           <p className="text-sm text-gray-500 mt-1">
-                            Company is not available. Press <span className="font-semibold">Enter</span> to create company.
+                            Company not found. Press <span className="font-semibold">Enter</span> to create company.
                           </p>
                         )}
                       </div>
@@ -437,7 +458,7 @@ const CreateCarModal = ({ isOpen, closeModal, onCreateSuccess, carOwnerId }) => 
                       />
                     </div>
 
-                    <div>
+                    <div ref={colorInputRef}>
                       <label className="block text-gray-700">Color:</label>
                       <div className="relative">
                         <input
@@ -446,10 +467,11 @@ const CreateCarModal = ({ isOpen, closeModal, onCreateSuccess, carOwnerId }) => 
                           value={searchColorQuery}
                           onChange={handleColorSearchChange}
                           onKeyDown={handleColorKeyDown}
+                          onFocus={() => setShowColorDropdown(true)}
                           className="w-full p-2 border rounded-md"
                         />
-                        {colorSuggestions.length > 0 && (
-                          <div className="absolute z-10 mt-1 w-full bg-white border border-gray-300 rounded-md shadow-lg">
+                        {showColorDropdown && colorSuggestions.length > 0 && (
+                          <div className="absolute z-10 mt-1 w-full bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto">
                             {colorSuggestions.map((color, index) => (
                               <div
                                 key={color}

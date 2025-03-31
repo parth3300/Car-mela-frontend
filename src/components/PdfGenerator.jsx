@@ -2,20 +2,36 @@ import React, { useState, useEffect } from "react";
 import { Document, Page, Text, View, StyleSheet, Image } from "@react-pdf/renderer";
 import QRCode from "qrcode";
 
-const PdfGenerator = ({ carDetails, customerDetails, paymentDetails, pdfUrl }) => {
-  // Generate a data URL for the QR code
+const PdfGenerator = ({ carDetails = {}, customerDetails = {}, paymentDetails = {}, pdfUrl = "" }) => {
   const [qrCodeDataUrl, setQrCodeDataUrl] = useState("");
 
   useEffect(() => {
-    // Generate QR code as data URL
-    QRCode.toDataURL(pdfUrl)
-      .then((url) => {
-        setQrCodeDataUrl(url);
-      })
-      .catch((err) => {
-        console.error("Error generating QR code:", err);
-      });
+    if (pdfUrl) {
+      QRCode.toDataURL(pdfUrl)
+        .then((url) => setQrCodeDataUrl(url))
+        .catch((err) => console.error("Error generating QR code:", err));
+    }
   }, [pdfUrl]);
+
+  // Safely format labels and values
+  const formatLabel = (str) => {
+    if (!str) return "";
+    return str
+      .replace(/_/g, ' ')
+      .replace(/(?:^\w|[A-Z]|\b\w)/g, (word, index) => 
+        index === 0 ? word.toUpperCase() : word.toLowerCase()
+      );
+  };
+
+  const formatValue = (key, value) => {
+    if (value === undefined || value === null) return "N/A";
+    if (typeof value === "number") {
+      if (key === "price") return `$${value.toLocaleString()}`;
+      if (key === "mileage") return `${value.toLocaleString()} miles`;
+      return value.toLocaleString();
+    }
+    return value.toString();
+  };
 
   const styles = StyleSheet.create({
     page: {
@@ -133,156 +149,139 @@ const PdfGenerator = ({ carDetails, customerDetails, paymentDetails, pdfUrl }) =
     },
   });
 
+  // Safely extract values with defaults
+  const safeCarDetails = {
+    title: "",
+    carmodel: "",
+    price: 0,
+    image: null,
+    vin: "",
+    year: "",
+    color: "",
+    mileage: 0,
+    ...carDetails
+  };
+
+  const safeCustomerDetails = {
+    id: "",
+    name: "",
+    email: "",
+    dial_code: "",
+    phone_number: "",
+    ...customerDetails
+  };
+
+  const safePaymentDetails = {
+    transactionId: "",
+    amount: 0,
+    date: new Date().toISOString(),
+    ...paymentDetails
+  };
+
   return (
     <Document>
       <Page size="A4" style={styles.page}>
         {/* Header */}
         <View style={styles.header}>
           <Text style={styles.title}>Purchase Confirmation</Text>
-          <Text style={styles.subtitle}>Order #: {paymentDetails.transactionId}</Text>
-          <Text style={styles.subtitle}>Date: {new Date(paymentDetails.date).toLocaleDateString()}</Text>
+          <Text style={styles.subtitle}>Order #: {safePaymentDetails.transactionId || "N/A"}</Text>
+          <Text style={styles.subtitle}>Date: {new Date(safePaymentDetails.date).toLocaleDateString()}</Text>
         </View>
 
         {/* Customer Details */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Customer Information</Text>
-          <View style={styles.row}>
-            <Text style={styles.label}>Customer ID:</Text>
-            <Text style={styles.value}>{customerDetails.id}</Text>
-          </View>
-          <View style={styles.row}>
-            <Text style={styles.label}>Name:</Text>
-            <Text style={styles.value}>{customerDetails.name}</Text>
-          </View>
-          <View style={styles.row}>
-            <Text style={styles.label}>Email:</Text>
-            <Text style={styles.value}>{customerDetails.email}</Text>
-          </View>
-          <View style={styles.row}>
-            <Text style={styles.label}>Phone:</Text>
-            <Text style={styles.value}>
-              {customerDetails.dial_code} {customerDetails.phone_number}
-            </Text>
-          </View>
+          {Object.entries(safeCustomerDetails).map(([key, value]) => (
+            <View style={styles.row} key={key}>
+              <Text style={styles.label}>{formatLabel(key)}:</Text>
+              <Text style={styles.value}>
+                {key === "phone_number" 
+                  ? `${safeCustomerDetails.dial_code ? `+${safeCustomerDetails.dial_code} ` : ""}${value || "N/A"}`
+                  : formatValue(key, value)}
+              </Text>
+            </View>
+          ))}
         </View>
 
         {/* Vehicle Details */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Vehicle Purchased</Text>
-          {carDetails.image && <Image src={carDetails.image} style={styles.carImage} alt={carDetails.title} />}
-          <View style={styles.row}>
-            <Text style={styles.label}>Make & Model:</Text>
-            <Text style={styles.value}>
-              {carDetails.title} {carDetails.carmodel}
-            </Text>
-          </View>
-          <View style={styles.row}>
-            <Text style={styles.label}>VIN:</Text>
-            <Text style={styles.value}>{carDetails.vin || "N/A"}</Text>
-          </View>
-          <View style={styles.row}>
-            <Text style={styles.label}>Year:</Text>
-            <Text style={styles.value}>{carDetails.year || "N/A"}</Text>
-          </View>
-          <View style={styles.row}>
-            <Text style={styles.label}>Color:</Text>
-            <Text style={styles.value}>{carDetails.color || "N/A"}</Text>
-          </View>
-          <View style={styles.row}>
-            <Text style={styles.label}>Mileage:</Text>
-            <Text style={styles.value}>{carDetails.mileage ? `${carDetails.mileage.toLocaleString()} miles` : "N/A"}</Text>
-          </View>
+          {safeCarDetails.image && (
+            <Image 
+              src={safeCarDetails.image} 
+              style={styles.carImage} 
+              alt={`${safeCarDetails.title} ${safeCarDetails.carmodel}`}
+            />
+          )}
+          {Object.entries(safeCarDetails).map(([key, value]) => {
+            if (key === "image") return null;
+            return (
+              <View style={styles.row} key={key}>
+                <Text style={styles.label}>{formatLabel(key)}:</Text>
+                <Text style={styles.value}>{formatValue(key, value)}</Text>
+              </View>
+            );
+          })}
         </View>
 
         {/* Payment Details */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Payment Information</Text>
           <View style={styles.table}>
-            {/* Table Header */}
             <View style={[styles.tableRow, styles.tableHeader]}>
-              <View style={styles.tableCol}>
-                <Text>Description</Text>
-              </View>
-              <View style={styles.tableCol}>
-                <Text>Quantity</Text>
-              </View>
-              <View style={styles.tableCol}>
-                <Text>Unit Price</Text>
-              </View>
-              <View style={styles.tableCol}>
-                <Text>Amount</Text>
-              </View>
+              <View style={styles.tableCol}><Text>Description</Text></View>
+              <View style={styles.tableCol}><Text>Quantity</Text></View>
+              <View style={styles.tableCol}><Text>Unit Price</Text></View>
+              <View style={styles.tableCol}><Text>Amount</Text></View>
             </View>
-
-            {/* Vehicle Row */}
+            
             <View style={styles.tableRow}>
               <View style={styles.tableCol}>
-                <Text>
-                  {carDetails.title} {carDetails.carmodel}
-                </Text>
+                <Text>{safeCarDetails.title} {safeCarDetails.carmodel}</Text>
+              </View>
+              <View style={styles.tableCol}><Text>1</Text></View>
+              <View style={styles.tableCol}>
+                <Text>${safeCarDetails.price.toLocaleString()}</Text>
               </View>
               <View style={styles.tableCol}>
-                <Text>1</Text>
-              </View>
-              <View style={styles.tableCol}>
-                <Text>${carDetails.price.toLocaleString()}</Text>
-              </View>
-              <View style={styles.tableCol}>
-                <Text>${carDetails.price.toLocaleString()}</Text>
+                <Text>${safeCarDetails.price.toLocaleString()}</Text>
               </View>
             </View>
-
-            {/* Taxes and Fees */}
+            
             <View style={styles.tableRow}>
+              <View style={styles.tableCol}><Text>Sales Tax (8%)</Text></View>
+              <View style={styles.tableCol}><Text>1</Text></View>
               <View style={styles.tableCol}>
-                <Text>Sales Tax (8%)</Text>
+                <Text>${(safeCarDetails.price * 0.08).toLocaleString(undefined, { maximumFractionDigits: 2 })}</Text>
               </View>
               <View style={styles.tableCol}>
-                <Text>1</Text>
-              </View>
-              <View style={styles.tableCol}>
-                <Text>${(carDetails.price * 0.08).toLocaleString(undefined, { maximumFractionDigits: 2 })}</Text>
-              </View>
-              <View style={styles.tableCol}>
-                <Text>${(carDetails.price * 0.08).toLocaleString(undefined, { maximumFractionDigits: 2 })}</Text>
+                <Text>${(safeCarDetails.price * 0.08).toLocaleString(undefined, { maximumFractionDigits: 2 })}</Text>
               </View>
             </View>
-
-            {/* Delivery Fee */}
+            
             <View style={styles.tableRow}>
-              <View style={styles.tableCol}>
-                <Text>Delivery Fee</Text>
-              </View>
-              <View style={styles.tableCol}>
-                <Text>1</Text>
-              </View>
-              <View style={styles.tableCol}>
-                <Text>$500.00</Text>
-              </View>
-              <View style={styles.tableCol}>
-                <Text>$500.00</Text>
-              </View>
+              <View style={styles.tableCol}><Text>Delivery Fee</Text></View>
+              <View style={styles.tableCol}><Text>1</Text></View>
+              <View style={styles.tableCol}><Text>$500.00</Text></View>
+              <View style={styles.tableCol}><Text>$500.00</Text></View>
             </View>
           </View>
-
-          {/* Total */}
+          
           <View style={styles.totalRow}>
             <Text style={styles.totalLabel}>Total:</Text>
             <Text style={styles.totalValue}>
-              ${(carDetails.price * 1.08 + 500).toLocaleString(undefined, { maximumFractionDigits: 2 })}
+              ${(safeCarDetails.price * 1.08 + 500).toLocaleString(undefined, { maximumFractionDigits: 2 })}
             </Text>
           </View>
         </View>
 
-        {/* QR Code Section */}
         {qrCodeDataUrl && (
           <View style={styles.qrContainer}>
-            <Image src={qrCodeDataUrl} style={styles.qrImage} alt="QR Code to access this document" />
+            <Image src={qrCodeDataUrl} style={styles.qrImage} alt="QR Code" />
             <Text style={styles.qrText}>Scan to view this document online</Text>
           </View>
         )}
 
-        {/* Terms and Conditions */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Terms & Conditions</Text>
           <Text style={{ fontSize: 10, lineHeight: 1.5 }}>
@@ -296,11 +295,8 @@ const PdfGenerator = ({ carDetails, customerDetails, paymentDetails, pdfUrl }) =
           </Text>
         </View>
 
-        {/* Footer */}
         <View style={styles.footer}>
-          <Text>
-            Thank you for your business! • {new Date().getFullYear()} © AutoDealer Inc.
-          </Text>
+          <Text>Thank you for your business! • {new Date().getFullYear()} © AutoDealer Inc.</Text>
         </View>
       </Page>
     </Document>
