@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import axios from "axios";
 import { BACKEND_URL } from "../../Constants/constant";
 import { motion, AnimatePresence } from "framer-motion";
@@ -21,7 +21,7 @@ const FUEL_CHOICES = [
 
 const CreateCarModal = ({ isOpen, closeModal, onCreateSuccess, carOwnerId }) => {
   // Initialize empty form data
-  const initialFormData = {
+  const initialFormData = useMemo(() => ({
     title: "",
     company: "",
     carmodel: "",
@@ -32,7 +32,7 @@ const CreateCarModal = ({ isOpen, closeModal, onCreateSuccess, carOwnerId }) => 
     description: "",
     price: "",
     ratings: "",
-  };
+  }), []);
 
   const [formData, setFormData] = useState(initialFormData);
   const [file, setFile] = useState(null);
@@ -70,7 +70,7 @@ const CreateCarModal = ({ isOpen, closeModal, onCreateSuccess, carOwnerId }) => 
       setShowCompanyDropdown(false);
       setShowColorDropdown(false);
     }
-  }, [isOpen]);
+  }, [isOpen, initialFormData]);
 
   useEffect(() => {
     const fetchCompanies = async () => {
@@ -350,7 +350,6 @@ const CreateCarModal = ({ isOpen, closeModal, onCreateSuccess, carOwnerId }) => 
     };
   }, [closeModal, showCompanyModal]);
 
-  
   return (
     <>
       <AnimatePresence>

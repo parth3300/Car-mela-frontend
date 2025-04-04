@@ -7,13 +7,10 @@ import { loadStripe } from "@stripe/stripe-js";
 import { Dialog, Transition } from "@headlessui/react";
 import { Fragment } from "react";
 
-import StarRating from "../../components/StarRating";
+import StarRating from "../../components/common/StarRating";
 import { BACKEND_URL, STRIPE_PUBLISHABLE_KEY } from "../../Constants/constant";
-import Notification from "../../components/Globle/Notification";
 import CreateCarOwnerModal from "../Carowner/CreateCarownerModal";
 import ResponseHandler from "../../components/Globle/ResponseHandler";
-
-
 
 const SkeletonLoader = () => {
   return (
@@ -90,7 +87,6 @@ const SkeletonLoader = () => {
     </div>
   );
 };
-
 
 const stripePromise = loadStripe(STRIPE_PUBLISHABLE_KEY);
 

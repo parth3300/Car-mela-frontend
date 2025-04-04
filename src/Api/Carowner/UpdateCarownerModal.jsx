@@ -304,7 +304,7 @@ const UpdateCarOwnerModal = ({ isOpen, closeModal, carowner, onUpdateSuccess, se
         // Clear the notification after 5 seconds
         setTimeout(() => {
           setNotification({ message: "", type: "" });
-        }, 5000);
+        }, 4000);
       }
 
       if (onUpdateSuccess) {

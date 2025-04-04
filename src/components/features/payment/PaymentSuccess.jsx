@@ -1,89 +1,55 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import axios from "axios";
 import { motion } from "framer-motion";
 import { CheckCircle, AlertCircle, Download, X } from "lucide-react";
-import { BACKEND_URL } from "../Constants/constant";
+import { BACKEND_URL } from "../../../Constants/constant";
 import { PDFDownloadLink } from '@react-pdf/renderer';
-import PdfGenerator from "./PdfGenerator";
+import PdfGenerator from "../../PdfGenerator";
 
 // // PDF Generator Component
 
 
 // Main Payment Success Component
 const PaymentSuccess = () => {
-  const [paymentStatus, setPaymentStatus] = useState({
-    loading: true,
-    success: false,
-    error: null,
-    carDetails: null,
-    paymentDetails: null,
-    customerDetails: null
-  });
-
+  const [loading, setLoading] = useState(false);
+  const [paymentStatus, setPaymentStatus] = useState(null);
   const navigate = useNavigate();
   const location = useLocation();
   const hasFetched = useRef(false);
   const queryParams = new URLSearchParams(location.search);
   const sessionId = queryParams.get("session_id");
 
-  const verifyPayment = async () => {
+  const verifyPayment = useCallback(async () => {
     try {
       if (!sessionId || hasFetched.current) return;
-      hasFetched.current = true;
-
-      const authToken = localStorage.getItem("authToken");
-      if (!authToken) throw new Error("User not authenticated");
-
-      const response = await axios.get(`${BACKEND_URL}/store/verify-payment/${sessionId}/`, {
-        headers: { Authorization: `Bearer ${authToken}` },
+      setLoading(true);
+      const response = await axios.post(`${BACKEND_URL}/store/verify-payment/`, {
+        session_id: sessionId
       });
-      const carDetails = await axios.get(`${BACKEND_URL}/store/cars/${response?.data?.car_id}/`, {
-        headers: { Authorization: `Bearer ${authToken}` },
-      });
-
-      const carOwnerDetails = await axios.get(`${BACKEND_URL}/store/carowners/${response?.data?.carowner_id}/`, {
-        headers: { Authorization: `Bearer ${authToken}` },
-      });
-      // Extract only the needed properties from the payment intent
-      const paymentIntent = response.data.session.payment_intent;
-      const amountTotal = response.data.session.amount_total / 100;
-
       
-      setPaymentStatus({
-        loading: false,
-        success: true,
-        error: null,
-        carDetails: carDetails.data,
-        paymentDetails: {
-          transactionId: typeof paymentIntent === 'object' ? paymentIntent.id : paymentIntent,
-          amount: amountTotal,
-          date: new Date().toISOString(),
-        },
-        customerDetails: carOwnerDetails.data
-      });
+      if (response.data.success) {
+        setPaymentStatus("success");
+      } else {
+        setPaymentStatus("failed");
+      }
     } catch (error) {
-      console.error("Payment verification failed:", error);
-      setPaymentStatus({
-        loading: false,
-        success: false,
-        error: error.response?.data?.message || "Payment verification failed",
-        carDetails: null,
-        paymentDetails: null,
-        customerDetails: null
-      });
+      console.error("Error verifying payment:", error);
+      setPaymentStatus("failed");
+    } finally {
+      setLoading(false);
     }
-  };
+  }, [sessionId]);
 
   useEffect(() => {
     verifyPayment();
-  }, [sessionId]);
+  }, [verifyPayment]);
 
   const handleClose = () => {
     navigate("/");
   };
 
-  if (paymentStatus.loading) {
+  if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <motion.div
@@ -125,7 +91,7 @@ const PaymentSuccess = () => {
           <X className="h-6 w-6 text-gray-500" />
         </button>
 
-        {paymentStatus.success ? (
+        {paymentStatus === "success" ? (
           <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
             <div className="p-8 sm:p-10">
               <div className="flex flex-col items-center text-center mb-8">

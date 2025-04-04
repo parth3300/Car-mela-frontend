@@ -8,7 +8,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import ResponseHandler from "../../components/Globle/ResponseHandler";
 import UpdateCompanyModal from "./UpdateCompanyModal";
 import { PencilSquareIcon } from "@heroicons/react/24/solid";
-import SkeletonLoader from "../../components/SkeletonLoader";
+import SkeletonLoader from "../../components/common/SkeletonLoader";
 
 const Company = () => {
   const [companies, setCompanies] = useState([]);

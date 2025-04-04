@@ -2,9 +2,9 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { motion, AnimatePresence } from 'framer-motion';
 import { StarIcon, ChatBubbleLeftRightIcon, PaperAirplaneIcon, UserIcon } from '@heroicons/react/24/solid';
-import Notification from './Globle/Notification';
+import Notification from '../../Globle/Notification';
 import { jwtDecode } from "jwt-decode";
-import { BACKEND_URL } from '../Constants/constant';
+import { BACKEND_URL } from '../../../Constants/constant';
 
 // Helper function to get CSRF token
 const getCookie = (name) => {

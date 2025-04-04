@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { BACKEND_URL } from "../Constants/constant";
+import { BACKEND_URL } from "../../Constants/constant";
 import { motion, AnimatePresence } from "framer-motion";
 import { Loader2, CheckCircle } from "lucide-react";
 

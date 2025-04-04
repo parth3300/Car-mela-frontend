@@ -8,7 +8,7 @@ import CustomerModal from "./CustomerModal";
 import UpdateCustomerModal from "./UpdateCustomerModal";
 import { PencilSquareIcon } from "@heroicons/react/24/solid";
 import { jwtDecode } from "jwt-decode";
-import SkeletonLoader from "../../components/SkeletonLoader";
+import SkeletonLoader from "../../components/common/SkeletonLoader";
 import ResponseHandler from "../../components/Globle/ResponseHandler";
 
 const Customers = () => {

@@ -7,7 +7,8 @@ import {
   UserIcon, 
   EnvelopeIcon,
   CalendarIcon,
-  PhotoIcon
+  PhotoIcon,
+  ExclamationTriangleIcon
 } from "@heroicons/react/24/solid";
 import { jwtDecode } from "jwt-decode";
 import { BACKEND_URL } from "../../Constants/constant";
