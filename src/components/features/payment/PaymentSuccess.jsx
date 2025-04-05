@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import axios from "axios";
 import { motion } from "framer-motion";
@@ -12,44 +12,78 @@ import PdfGenerator from "../../PdfGenerator";
 
 // Main Payment Success Component
 const PaymentSuccess = () => {
-  const [loading, setLoading] = useState(false);
-  const [paymentStatus, setPaymentStatus] = useState(null);
+  const [paymentStatus, setPaymentStatus] = useState({
+    loading: true,
+    success: false,
+    error: null,
+    carDetails: null,
+    paymentDetails: null,
+    customerDetails: null
+  });
+
   const navigate = useNavigate();
   const location = useLocation();
   const hasFetched = useRef(false);
   const queryParams = new URLSearchParams(location.search);
   const sessionId = queryParams.get("session_id");
 
-  const verifyPayment = useCallback(async () => {
+  const verifyPayment = async () => {
     try {
       if (!sessionId || hasFetched.current) return;
-      setLoading(true);
-      const response = await axios.post(`${BACKEND_URL}/store/verify-payment/`, {
-        session_id: sessionId
+      hasFetched.current = true;
+
+      const authToken = localStorage.getItem("authToken");
+      if (!authToken) throw new Error("User not authenticated");
+
+      const response = await axios.get(`${BACKEND_URL}/store/verify-payment/${sessionId}/`, {
+        headers: { Authorization: `Bearer ${authToken}` },
       });
+      const carDetails = await axios.get(`${BACKEND_URL}/store/cars/${response?.data?.car_id}/`, {
+        headers: { Authorization: `Bearer ${authToken}` },
+      });
+
+      const carOwnerDetails = await axios.get(`${BACKEND_URL}/store/carowners/${response?.data?.carowner_id}/`, {
+        headers: { Authorization: `Bearer ${authToken}` },
+      });
+      // Extract only the needed properties from the payment intent
+      const paymentIntent = response.data.session.payment_intent;
+      const amountTotal = response.data.session.amount_total / 100;
+
       
-      if (response.data.success) {
-        setPaymentStatus("success");
-      } else {
-        setPaymentStatus("failed");
-      }
+      setPaymentStatus({
+        loading: false,
+        success: true,
+        error: null,
+        carDetails: carDetails.data,
+        paymentDetails: {
+          transactionId: typeof paymentIntent === 'object' ? paymentIntent.id : paymentIntent,
+          amount: amountTotal,
+          date: new Date().toISOString(),
+        },
+        customerDetails: carOwnerDetails.data
+      });
     } catch (error) {
-      console.error("Error verifying payment:", error);
-      setPaymentStatus("failed");
-    } finally {
-      setLoading(false);
+      console.error("Payment verification failed:", error);
+      setPaymentStatus({
+        loading: false,
+        success: false,
+        error: error.response?.data?.message || "Payment verification failed",
+        carDetails: null,
+        paymentDetails: null,
+        customerDetails: null
+      });
     }
-  }, [sessionId]);
+  };
 
   useEffect(() => {
     verifyPayment();
-  }, [verifyPayment]);
+  }, [sessionId]);
 
   const handleClose = () => {
     navigate("/");
   };
 
-  if (loading) {
+  if (paymentStatus.loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <motion.div
@@ -91,7 +125,7 @@ const PaymentSuccess = () => {
           <X className="h-6 w-6 text-gray-500" />
         </button>
 
-        {paymentStatus === "success" ? (
+        {paymentStatus.success ? (
           <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
             <div className="p-8 sm:p-10">
               <div className="flex flex-col items-center text-center mb-8">
