@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import axios from "axios";
 import { BACKEND_URL } from "../../Constants/constant";
@@ -12,11 +12,25 @@ const Login = () => {
   const [message, setMessage] = useState(null);
   const [error, setError] = useState(null);
 
+  const usernameRef = useRef(null);
+  const passwordRef = useRef(null);
+
   const { login } = useAuth();
   const navigate = useNavigate();
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
+
+  const handleKeyDown = (e, nextFieldRef) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      if (nextFieldRef) {
+        nextFieldRef.current.focus();
+      } else if (formData.username && formData.password) {
+        handleLogin();
+      }
+    }
   };
 
   const handleLogin = async () => {
@@ -30,26 +44,18 @@ const Login = () => {
       if (response.data.access) {
         login(response.data.access, formData.username);
         setMessage("Login successful! Redirecting...");
-
         setTimeout(() => navigate("/"), 2000);
       } else {
         setError("Login failed. No token returned.");
       }
     } catch (error) {
-      // Extract error messages from Django API response
       if (error.response && error.response.data) {
         const { data } = error.response;
-
-        // Handle general errors (e.g., `detail`)
         if (data.detail) {
           setError(data.detail);
-        }
-        // Handle non-field errors (e.g., `non_field_errors`)
-        else if (data.non_field_errors) {
+        } else if (data.non_field_errors) {
           setError(data.non_field_errors.join(" "));
-        }
-        // Handle field-specific errors (e.g., `username`, `password`)
-        else {
+        } else {
           const fieldErrors = Object.entries(data)
             .map(([field, errors]) => `${field}: ${errors.join(" ")}`)
             .join(" ");
@@ -60,7 +66,6 @@ const Login = () => {
       }
       console.error("Login error:", error);
     }
-
     setLoading(false);
   };
 
@@ -172,12 +177,14 @@ const Login = () => {
             transition={{ delay: 0.3 }}
           >
             <input
+              ref={usernameRef}
               type="text"
               name="username"
               id="username"
               placeholder=" "
               value={formData.username}
               onChange={handleChange}
+              onKeyDown={(e) => handleKeyDown(e, passwordRef)}
               className="peer w-full border border-gray-300 rounded-md bg-transparent px-3 pt-5 pb-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
             />
             <label
@@ -198,12 +205,14 @@ const Login = () => {
             transition={{ delay: 0.4 }}
           >
             <input
+              ref={passwordRef}
               type="password"
               name="password"
               id="password"
               placeholder=" "
               value={formData.password}
               onChange={handleChange}
+              onKeyDown={(e) => handleKeyDown(e, null)}
               className="peer w-full border border-gray-300 rounded-md bg-transparent px-3 pt-5 pb-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
             />
             <label

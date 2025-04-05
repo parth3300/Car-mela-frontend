@@ -3,12 +3,14 @@ import { Link, NavLink } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "../../context/AuthContext";
 import { XMarkIcon, Bars3Icon, UserCircleIcon, ChevronDownIcon } from "@heroicons/react/24/solid";
+import { useNavigate } from "react-router-dom";
 
 const Navbar = () => {
   const { user, logout } = useAuth();
   const [showWelcome, setShowWelcome] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const navigate = useNavigate();
 
   useEffect(() => {
     if (user) {
@@ -87,6 +89,8 @@ const Navbar = () => {
                         onClick={() => {
                           setUserMenuOpen(false);
                           logout();
+                          navigate("/", { replace: true }); // Redirects to home page
+                          window.location.reload(); // Optional: if you really need a hard reload
                         }}
                         className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors"
                       >

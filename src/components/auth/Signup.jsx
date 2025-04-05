@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { BACKEND_URL } from "../../Constants/constant";
 import { motion, AnimatePresence } from "framer-motion";
@@ -19,8 +19,41 @@ const Signup = () => {
   const [message, setMessage] = useState(null);
   const [errors, setErrors] = useState({});
 
+  // Create refs for each input field
+  const firstNameRef = useRef(null);
+  const lastNameRef = useRef(null);
+  const emailRef = useRef(null);
+  const usernameRef = useRef(null);
+  const passwordRef = useRef(null);
+
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
+
+  const handleKeyDown = (e, nextFieldRef) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      
+      // If there's a next field, focus it
+      if (nextFieldRef && nextFieldRef.current) {
+        nextFieldRef.current.focus();
+      } 
+      // If we're on the last field and all fields are filled, submit
+      else if (isFormFilled()) {
+        handleSignup();
+      }
+    }
+  };
+
+  // Check if all form fields are filled
+  const isFormFilled = () => {
+    return (
+      formData.first_name.trim() &&
+      formData.last_name.trim() &&
+      formData.email.trim() &&
+      formData.username.trim() &&
+      formData.password.trim()
+    );
   };
 
   const handleSignup = async () => {
@@ -150,11 +183,13 @@ const Signup = () => {
             transition={{ delay: 0.3 }}
           >
             <input
+              ref={firstNameRef}
               type="text"
               name="first_name"
               id="first_name"
               value={formData.first_name}
               onChange={handleChange}
+              onKeyDown={(e) => handleKeyDown(e, lastNameRef)}
               placeholder=" "
               required
               className="peer w-full border border-gray-300 rounded-md bg-transparent px-3 pt-5 pb-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
@@ -175,11 +210,13 @@ const Signup = () => {
             transition={{ delay: 0.4 }}
           >
             <input
+              ref={lastNameRef}
               type="text"
               name="last_name"
               id="last_name"
               value={formData.last_name}
               onChange={handleChange}
+              onKeyDown={(e) => handleKeyDown(e, emailRef)}
               placeholder=" "
               required
               className="peer w-full border border-gray-300 rounded-md bg-transparent px-3 pt-5 pb-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
@@ -200,11 +237,13 @@ const Signup = () => {
             transition={{ delay: 0.5 }}
           >
             <input
+              ref={emailRef}
               type="email"
               name="email"
               id="email"
               value={formData.email}
               onChange={handleChange}
+              onKeyDown={(e) => handleKeyDown(e, usernameRef)}
               placeholder=" "
               required
               className="peer w-full border border-gray-300 rounded-md bg-transparent px-3 pt-5 pb-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
@@ -225,11 +264,13 @@ const Signup = () => {
             transition={{ delay: 0.6 }}
           >
             <input
+              ref={usernameRef}
               type="text"
               name="username"
               id="username"
               value={formData.username}
               onChange={handleChange}
+              onKeyDown={(e) => handleKeyDown(e, passwordRef)}
               placeholder=" "
               required
               className="peer w-full border border-gray-300 rounded-md bg-transparent px-3 pt-5 pb-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
@@ -250,11 +291,13 @@ const Signup = () => {
             transition={{ delay: 0.7 }}
           >
             <input
+              ref={passwordRef}
               type="password"
               name="password"
               id="password"
               value={formData.password}
               onChange={handleChange}
+              onKeyDown={(e) => handleKeyDown(e, null)}
               placeholder=" "
               required
               className="peer w-full border border-gray-300 rounded-md bg-transparent px-3 pt-5 pb-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
