@@ -118,7 +118,12 @@ const PdfGenerator = ({ carDetails = {}, customerDetails = {}, paymentDetails = 
     mileage: carDetails.mileage || 0,
     year: carDetails.year || "N/A",
     condition: carDetails.condition || "N/A",
-    image: carImageDataUrl || "https://via.placeholder.com/300x200?text=Car+Image"
+    image: carImageDataUrl || "https://via.placeholder.com/300x200?text=Car+Image",
+    company_title: carDetails.company_title || "N/A",
+    registration_year: carDetails.registration_year || "N/A",
+    fuel_type: carDetails.fuel_type || "N/A",
+    description: carDetails.description || "N/A",
+    average_rating: carDetails.average_rating || 0
   };
 
   const safeCustomerDetails = {
@@ -276,6 +281,12 @@ const PdfGenerator = ({ carDetails = {}, customerDetails = {}, paymentDetails = 
               </Text>
             </View>
             <View style={styles.carDetailItem}>
+              <Text style={styles.carDetailLabel}>Company</Text>
+              <Text style={styles.carDetailValue}>
+                {safeCarDetails.company_title}
+              </Text>
+            </View>
+            <View style={styles.carDetailItem}>
               <Text style={styles.carDetailLabel}>Price</Text>
               <Text style={styles.carDetailValue}>
                 ${safeCarDetails.price?.toLocaleString() || "N/A"}
@@ -296,16 +307,30 @@ const PdfGenerator = ({ carDetails = {}, customerDetails = {}, paymentDetails = 
             <View style={styles.carDetailItem}>
               <Text style={styles.carDetailLabel}>Year</Text>
               <Text style={styles.carDetailValue}>
-                {safeCarDetails.year}
+                {safeCarDetails.registration_year}
               </Text>
             </View>
             <View style={styles.carDetailItem}>
-              <Text style={styles.carDetailLabel}>Condition</Text>
+              <Text style={styles.carDetailLabel}>Fuel Type</Text>
               <Text style={styles.carDetailValue}>
-                {safeCarDetails.condition}
+                {safeCarDetails.fuel_type}
+              </Text>
+            </View>
+            <View style={styles.carDetailItem}>
+              <Text style={styles.carDetailLabel}>Rating</Text>
+              <Text style={styles.carDetailValue}>
+                {safeCarDetails.average_rating ? `${safeCarDetails.average_rating.toFixed(1)} / 5.0` : "N/A"}
               </Text>
             </View>
           </View>
+          
+          {/* Car Description */}
+          {safeCarDetails.description && (
+            <View style={styles.descriptionContainer}>
+              <Text style={styles.descriptionTitle}>Description</Text>
+              <Text style={styles.descriptionText}>{safeCarDetails.description}</Text>
+            </View>
+          )}
         </View>
 
         {/* Page Number */}
@@ -390,8 +415,6 @@ const PdfGenerator = ({ carDetails = {}, customerDetails = {}, paymentDetails = 
           </View>
         )}
 
-
-
         {/* Signature Line */}
         <View style={styles.signatureLine}>
           <Text style={styles.signatureText}>Authorized Signature</Text>
@@ -455,16 +478,22 @@ const styles = StyleSheet.create({
   },
   headerText: {
     flex: 1,
+    alignItems: 'flex-start',
+    justifyContent: 'center',
   },
+  
   title: {
     fontSize: 24,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 5,
+    marginBottom: 5, // Reduced from 20 for better spacing
+    color: "#333333",
+    fontWeight: "bold",
+    marginRight: 35, // Reduced from 20 for better spacing
+
   },
   subtitle: {
-    fontSize: 14,
-    color: '#666',
+    fontSize: 18,
+    color: "#555555",
+    fontWeight: "bold",
   },
   section: {
     marginBottom: 20,
@@ -642,6 +671,23 @@ const styles = StyleSheet.create({
     color: '#555',
     marginBottom: 3,
     paddingLeft: 5,
+  },
+  descriptionContainer: {
+    marginTop: 15,
+    padding: 10,
+    backgroundColor: '#f9f9f9',
+    borderRadius: 4,
+  },
+  descriptionTitle: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 5,
+  },
+  descriptionText: {
+    fontSize: 12,
+    color: '#555',
+    lineHeight: 1.5,
   },
 });
 

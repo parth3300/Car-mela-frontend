@@ -324,7 +324,7 @@ const PaymentSuccess = () => {
                           className="w-full px-6 py-3 border border-transparent rounded-md shadow-sm text-base font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 inline-flex items-center justify-center"
                         >
                           <Download className="h-5 w-5 mr-2" />
-                          {loading ? 'Generating...' : 'Get PDF'}
+                          {loading ? 'Generating...' : 'Download PDF'}
                         </button>
                       )}
                     </PDFDownloadLink>

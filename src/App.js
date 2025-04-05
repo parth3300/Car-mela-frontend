@@ -18,6 +18,7 @@ import PaymentCanceled from "./components/features/payment/PaymentCanceled";
 import Support from "./components/features/support/Support";
 import Customers from "./Api/Customers/Customer";
 import { Toaster } from "react-hot-toast";
+import ScrollToTop from "./components/ScrollToTop";
 
 const AuthRedirect = ({ children }) => {
   const { user } = useAuth();
@@ -28,6 +29,7 @@ function App() {
   return (
     <AuthProvider>
       <Router>
+        <ScrollToTop />
         <div className="flex flex-col min-h-screen bg-gray-50">
           <Navbar />
           <main className="flex-grow">
