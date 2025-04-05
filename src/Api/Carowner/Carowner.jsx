@@ -203,8 +203,8 @@ const Carowners = () => {
 
                 {/* Balance on Hover */}
                 <div className="absolute inset-0 bg-black bg-opacity-50 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-center items-center text-white px-4">
-                  <p className="text-lg font-semibold">Balance:</p>
-                  <p className="text-2xl font-bold">${carowner.balance || 0}</p>
+                  <p className="text-lg text-white font-semibold">Balance:</p>
+                  <p className="text-2xl text-white font-bold">${carowner.balance || 0}</p>
                 </div>
 
                 {/* Update Button */}

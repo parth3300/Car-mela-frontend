@@ -92,6 +92,31 @@ const PdfGenerator = ({ carDetails = {}, customerDetails = {}, paymentDetails = 
     return value.toString();
   };
 
+  // Function to render star ratings
+  const renderStarRating = (rating) => {
+    if (rating === null || rating === undefined) return <Text style={styles.value}>N/A</Text>;
+    
+    const numericRating = Number(rating);
+    if (isNaN(numericRating)) return <Text style={styles.value}>N/A</Text>;
+    
+    const fullStars = Math.floor(numericRating);
+    const hasHalfStar = numericRating % 1 >= 0.5;
+    const emptyStars = 5 - fullStars - (hasHalfStar ? 1 : 0);
+    
+    return (
+      <View style={styles.starsContainer}>
+        {[...Array(fullStars)].map((_, i) => (
+          <Text key={`full-${i}`} style={styles.star}>★</Text>
+        ))}
+        {hasHalfStar && <Text style={styles.halfStar}>½</Text>}
+        {[...Array(emptyStars)].map((_, i) => (
+          <Text key={`empty-${i}`} style={styles.emptyStar}>☆</Text>
+        ))}
+        <Text style={styles.ratingText}>({numericRating.toFixed(1)})</Text>
+      </View>
+    );
+  };
+
   const styles = StyleSheet.create({
     page: {
       fontFamily: "Helvetica",
@@ -221,6 +246,27 @@ const PdfGenerator = ({ carDetails = {}, customerDetails = {}, paymentDetails = 
       fontSize: 10,
       textAlign: "center",
       color: "#999999",
+    },
+    starsContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+    },
+    star: {
+      fontSize: 12,
+      color: '#FFD700',
+    },
+    halfStar: {
+      fontSize: 12,
+      color: '#FFD700',
+    },
+    emptyStar: {
+      fontSize: 12,
+      color: '#CCCCCC',
+    },
+    ratingText: {
+      marginLeft: 5,
+      fontSize: 12,
+      color: "#333333",
     },
   });
 
