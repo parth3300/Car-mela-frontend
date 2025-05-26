@@ -230,7 +230,7 @@ const CreateCarOwnerModal = ({ isOpen, closeModal, onCreateSuccess }) => {
     reader.onloadend = () => {
       setPreviewImage(reader.result);
     };
-    reader.readAsDataURL(file);
+    reader.readAsDataURL(file); 
   };
 
   const handleSubmit = async (e) => {

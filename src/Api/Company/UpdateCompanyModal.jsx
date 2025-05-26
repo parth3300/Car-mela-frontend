@@ -148,7 +148,255 @@ const UpdateCompanyModal = ({ isOpen, onClose, company, onUpdateSuccess }) => {
     e.preventDefault();
     setLoading(true);
     clearNotification();
+// const cars = [
+//     {
+//         "title": "Fortuner",
+//         "carmodel": "Legender 4x4 AT",
+//         "color": "White",
+//         "registration_year": "2023",
+//         "fuel_type": "Diesel",
+//         "mileage": 15000,
+//         "description": "Premium SUV with 2.8L engine, 4WD, and advanced safety features",
+//         "price": 5200000,
+//         "ratings": "4",
+//         "company": 2  
+//     },
+//     {
+//         "title": "Virtus",
+//         "carmodel": "GT Plus 1.5 TSI",
+//         "color": "Grey",
+//         "registration_year": "2022",
+//         "fuel_type": "Petrol",
+//         "mileage": 18000,
+//         "description": "Sporty sedan with sunroof and premium interiors",
+//         "price": 1850000,
+//         "ratings": "4",
+//         "company": 4  
+//     },
+//     {
+//         "title": "Nexon",
+//         "carmodel": "EV Max XZ+ Lux",
+//         "color": "Blue",
+//         "registration_year": "2023",
+//         "fuel_type": "Electric",
+//         "mileage": 5000,
+//         "description": "Electric SUV with 437km range and premium features",
+//         "price": 1950000,
+//         "ratings": "5",
+//         "company": 7  
+//     },
+//     {
+//         "title": "Camaro",
+//         "carmodel": "SS 6.2L V8",
+//         "color": "Yellow",
+//         "registration_year": "2021",
+//         "fuel_type": "Petrol",
+//         "mileage": 12000,
+//         "description": "American muscle car with 455 HP engine",
+//         "price": 8500000,
+//         "ratings": "5",
+//         "company": 10  
+//     },
+//     {
+//         "title": "XC90",
+//         "carmodel": "Recharge T8 Inscription",
+//         "color": "Black",
+//         "registration_year": "2022",
+//         "fuel_type": "Electric",
+//         "mileage": 10000,
+//         "description": "Luxury plug-in hybrid SUV with premium sound system",
+//         "price": 12500000,
+//         "ratings": "5",
+//         "company": 9  
+//     },
+//     {
+//         "title": "Kwid",
+//         "carmodel": "Climber AMT",
+//         "color": "Red",
+//         "registration_year": "2023",
+//         "fuel_type": "Petrol",
+//         "mileage": 8000,
+//         "description": "Compact SUV-style hatchback with rugged looks",
+//         "price": 650000,
+//         "ratings": "3",
+//         "company": 8  
+//     },
+//     {
+//         "title": "Ioniq 5",
+//         "carmodel": "Premium RWD",
+//         "color": "Teal",
+//         "registration_year": "2023",
+//         "fuel_type": "Electric",
+//         "mileage": 3000,
+//         "description": "Futuristic electric crossover with ultra-fast charging",
+//         "price": 4800000,
+//         "ratings": "4",
+//         "company": 5  
+//     },
+//     {
+//         "title": "Roma",
+//         "carmodel": "Spider 3.9L V8",
+//         "color": "Red",
+//         "registration_year": "2022",
+//         "fuel_type": "Petrol",
+//         "mileage": 5000,
+//         "description": "Elegant grand tourer with 620 HP turbo engine",
+//         "price": 45000000,
+//         "ratings": "5",
+//         "company": 6  
+//     },
+//     {
+//         "title": "Seltos",
+//         "carmodel": "HTX 1.5 Diesel",
+//         "color": "Blue",
+//         "registration_year": "2023",
+//         "fuel_type": "Diesel",
+//         "mileage": 12000,
+//         "description": "Feature-packed compact SUV with connected car tech",
+//         "price": 1650000,
+//         "ratings": "4",
+//         "company": 11  
+//     },
+//     {
+//         "title": "Mustang",
+//         "carmodel": "GT 5.0L V8",
+//         "color": "Blue",
+//         "registration_year": "2021",
+//         "fuel_type": "Petrol",
+//         "mileage": 15000,
+//         "description": "Iconic American muscle car with 450 HP",
+//         "price": 8500000,
+//         "ratings": "5",
+//         "company": 3  
+//     }
+// ]
 
+// for (const company of cars) {
+//   const formData = new FormData();
+//   formData.append("title", company.title);
+//   formData.append("carmodel", company.carmodel);
+//   formData.append("color", company.color);
+//   formData.append("registration_year", company.registration_year);
+//   formData.append("fuel_type", company.fuel_type);
+//   formData.append("mileage", company.mileage);
+//   formData.append("description", company.description);
+//   formData.append("price", company.price);
+//   formData.append("ratings", company.ratings);
+//   formData.append("company", company.company);
+
+//   try {
+//     const res = await axios.post(`${BACKEND_URL}/store/cars/`, formData, {
+//       headers: {
+//         Authorization: `Bearer ${authToken}`,
+//         "Content-Type": "multipart/form-data",
+//       },
+//     });
+//     console.log(`Inserted ${company.title}`, res.data);
+//   } catch (error) {
+//     console.error(`Error inserting ${company.title}`, error.response?.data || error);
+//   }
+// }
+const dealerships = [
+  {
+    dealership_name: "AutoDrive Mumbai",
+    dial_code: 91,
+    phone_number: 9876543210,
+    address: "123 Linking Road, Mumbai, Maharashtra",
+    ratings: "5",
+    image: null,  // Add Cloudinary image URL if needed
+  },
+  {
+    dealership_name: "Speed Motors Delhi",
+    dial_code: 91,
+    phone_number: 9898989898,
+    address: "Karol Bagh, New Delhi",
+    ratings: "4",
+    image: null,
+  },
+  {
+    dealership_name: "USA AutoHub",
+    dial_code: 1,
+    phone_number: 2025550191,
+    address: "101 Main Street, Dallas, TX",
+    ratings: "5",
+    image: null,
+  },
+  {
+    dealership_name: "Berlin Autohaus",
+    dial_code: 49,
+    phone_number: 3055551010,
+    address: "Unter den Linden, Berlin, Germany",
+    ratings: "4",
+    image: null,
+  },
+  {
+    dealership_name: "Tokyo Car Center",
+    dial_code: 81,
+    phone_number: 8012345678,
+    address: "Shinjuku, Tokyo, Japan",
+    ratings: "5",
+    image: null,
+  },
+  {
+    dealership_name: "Milan Speed Wheels",
+    dial_code: 39,
+    phone_number: 3216549870,
+    address: "Via Roma, Milan, Italy",
+    ratings: "4",
+    image: null,
+  },
+  {
+    dealership_name: "Hyderabad RideMart",
+    dial_code: 91,
+    phone_number: 9247123456,
+    address: "Madhapur, Hyderabad",
+    ratings: "3",
+    image: null,
+  },
+  {
+    dealership_name: "Chennai AutoWorld",
+    dial_code: 91,
+    phone_number: 9361123456,
+    address: "T. Nagar, Chennai",
+    ratings: "5",
+    image: null,
+  },
+  {
+    dealership_name: "Paris Auto Store",
+    dial_code: 33,
+    phone_number: 612345678,
+    address: "Rue de Rivoli, Paris, France",
+    ratings: "4",
+    image: null,
+  },
+  {
+    dealership_name: "London Car House",
+    dial_code: 44,
+    phone_number: 7911123456,
+    address: "Oxford Street, London, UK",
+    ratings: "5",
+    image: null,
+  }
+];
+for (let data of dealerships) {
+  const formData = new FormData();
+  formData.append("dealership_name", data.dealership_name);
+  formData.append("dial_code", data.dial_code);
+  formData.append("phone_number", data.phone_number);
+  formData.append("address", data.address);
+  formData.append("ratings", data.ratings);
+
+  if (data.image) {
+    formData.append("image", data.image); // if you use local uploads or Cloudinary URLs
+  }
+
+  await axios.post(`${BACKEND_URL}/store/dealerships/`, formData, {
+    headers: {
+      Authorization: `Bearer ${authToken}`,
+      "Content-Type": "multipart/form-data",
+    },
+  });
+}
     try {
       const formData = new FormData();
       formData.append("title", title);

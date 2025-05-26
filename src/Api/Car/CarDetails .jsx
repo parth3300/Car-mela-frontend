@@ -514,7 +514,7 @@ const CarDetails = () => {
         {
           car_id: id,
           carowner_id: carowner.id,
-          amount: car.price * 100,
+          amount: car.price,
           currency: "usd",
           user_id: user_id,
           user_email: carowner.email,
